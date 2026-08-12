@@ -1,0 +1,16 @@
+{
+  "name": "gcash-inventory",
+  "version": "1.0.0",
+  "description": "GCash Inventory Management System",
+  "main": "index.html",
+  "scripts": {
+    "dev": "http-server -p 8080 -o",
+    "start": "http-server -p 8080"
+  },
+  "keywords": ["gcash", "inventory"],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  }
+}

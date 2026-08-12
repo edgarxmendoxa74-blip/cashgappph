@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GCash Inventory Management System</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="stylesheet" href="styles.css">
+    <link href="fontawesome.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Fallback icon system - removes dependency on CDN */
+        .fas::before { font-family: Arial, sans-serif; font-weight: bold; }
+        .fa-tachometer-alt::before { content: "📊"; margin-right: 8px; }
+        .fa-exchange-alt::before { content: "🔄"; margin-right: 8px; }
+        .fa-users::before { content: "👥"; margin-right: 8px; }
+        .fa-warehouse::before { content: "🏭"; margin-right: 8px; }
+        .fa-chart-line::before { content: "📈"; margin-right: 8px; }
+        .fa-cog::before { content: "⚙️"; margin-right: 8px; }
+        .fa-user-circle::before { content: "👤"; margin-right: 8px; }
+        .fa-bars::before { content: "☰"; }
+        .fa-mobile-alt::before { content: "📱"; margin-right: 8px; }
+        .fa-wallet::before { content: "💰"; margin-right: 8px; }
+        .fa-arrow-down::before { content: "⬇️"; margin-right: 8px; }
+        .fa-arrow-up::before { content: "⬆️"; margin-right: 8px; }
+        .fa-plus::before { content: "+"; margin-right: 8px; font-weight: bold; }
+        .fa-minus::before { content: "−"; margin-right: 8px; font-weight: bold; }
+        .fa-user-plus::before { content: "👤+"; margin-right: 8px; }
+        .fa-file-alt::before { content: "📄"; margin-right: 8px; }
+        .fa-check-circle::before { content: "✓"; margin-right: 8px; }
+        .fa-exclamation-circle::before { content: "⚠️"; margin-right: 8px; }
+        .fa-exclamation-triangle::before { content: "⚠️"; margin-right: 8px; }
+        .fa-info-circle::before { content: "ℹ️"; margin-right: 8px; }
+    </style>
+</head>
+<body>
+    <!-- Sidebar Navigation -->
+    <nav class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <img src="gcash-logo.svg" alt="GCash" class="logo-image">
+                <span>Inventory</span>
+            </div>
+            <button class="sidebar-toggle" id="sidebarToggle">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+        
+        <ul class="sidebar-menu">
+            <li class="menu-item active">
+                <a href="#dashboard" data-page="dashboard">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span>Dashboard</span>
+                </a>
+            </li>
+            <li class="menu-item">
+                <a href="#transactions" data-page="transactions">
+                    <i class="fas fa-exchange-alt"></i>
+                    <span>Transactions</span>
+                </a>
+            </li>
+            <li class="menu-item">
+                <a href="#customers" data-page="customers">
+                    <i class="fas fa-users"></i>
+                    <span>Customers</span>
+                </a>
+            </li>
+            <li class="menu-item">
+                <a href="#inventory" data-page="inventory">
+                    <i class="fas fa-warehouse"></i>
+                    <span>Inventory</span>
+                </a>
+            </li>
+            <li class="menu-item">
+                <a href="#reports" data-page="reports">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Reports</span>
+                </a>
+            </li>
+            <li class="menu-item">
+                <a href="#settings" data-page="settings">
+                    <i class="fas fa-cog"></i>
+                    <span>Settings</span>
+                </a>
+            </li>
+        </ul>
+        
+        <div class="sidebar-footer">
+            <div class="user-info">
+                <i class="fas fa-user-circle"></i>
+                <span>Admin User</span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <header class="top-header">
+            <div class="header-left">
+                <h1 id="pageTitle">Dashboard</h1>
+                <p class="current-date" id="currentDate"></p>
+            </div>
+            <div class="header-right">
+                <div class="quick-stats">
+                    <div class="stat-item">
+                        <i class="fas fa-wallet"></i>
+                        <span>Cash: ₱<span id="cashOnHand">0</span></span>
+                    </div>
+                    <div class="stat-item">
+                        <i class="fas fa-mobile-alt"></i>
+                        <span>GCash: ₱<span id="gcashBalance">0</span></span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Dashboard Page -->
+        <div class="page-content" id="dashboard-page">
+            <div class="dashboard-grid">
+                <!-- Summary Cards -->
+                <div class="summary-cards">
+                    <div class="summary-card cash-in">
+                        <div class="card-icon">
+                            <i class="fas fa-arrow-down"></i>
+                        </div>
+                        <div class="card-content">
+                            <h3>Today's Cash In</h3>
+                            <div class="amount">₱<span id="todayCashIn">0</span></div>
+                            <div class="count"><span id="todayCashInCount">0</span> transactions</div>
+                        </div>
+                    </div>
+                    
+                    <div class="summary-card cash-out">
+                        <div class="card-icon">
+                            <i class="fas fa-arrow-up"></i>
+                        </div>
+                        <div class="card-content">
+                            <h3>Today's Cash Out</h3>
+                            <div class="amount">₱<span id="todayCashOut">0</span></div>
+                            <div class="count"><span id="todayCashOutCount">0</span> transactions</div>
+                        </div>
+                    </div>
+                    
+                    <div class="summary-card profit">
+                        <div class="card-icon">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <div class="card-content">
+                            <h3>Today's Profit</h3>
+                            <div class="amount">₱<span id="todayProfit">0</span></div>
+                            <div class="count">From fees collected</div>
+                        </div>
+                    </div>
+                    
+                    <div class="summary-card customers">
+                        <div class="card-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="card-content">
+                            <h3>Active Customers</h3>
+                            <div class="amount"><span id="activeCustomers">0</span></div>
+                            <div class="count">This month</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="quick-actions">
+                    <h3>Quick Actions</h3>
+                    <div class="action-buttons">
+                        <button class="action-btn cash-in-btn" onclick="openTransactionModal('cashin')">
+                            <i class="fas fa-plus"></i>
+                            <span>New Cash In</span>
+                        </button>
+                        <button class="action-btn cash-out-btn" onclick="openTransactionModal('cashout')">
+                            <i class="fas fa-minus"></i>
+                            <span>New Cash Out</span>
+                        </button>
+                        <button class="action-btn customer-btn" onclick="openCustomerModal()">
+                            <i class="fas fa-user-plus"></i>
+                            <span>Add Customer</span>
+                        </button>
+                        <button class="action-btn report-btn" onclick="generateDailyReport()">
+                            <i class="fas fa-file-alt"></i>
+                            <span>Daily Report</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Recent Transactions -->
+                <div class="recent-transactions">
+                    <div class="section-header">
+                        <h3>Recent Transactions</h3>
+                        <button class="view-all-btn" onclick="navigateToPage('transactions')">View All</button>
+                    </div>
+                    <div class="transactions-list" id="recentTransactionsList">
+                        <!-- Transactions will be populated by JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Balance Overview Chart -->
+                <div class="balance-chart">
+                    <h3>Balance Overview</h3>
+                    <canvas id="balanceChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Transactions Page -->
+        <div class="page-content" id="transactions-page" style="display: none;">
+            <div class="page-header">
+                <div class="header-left">
+                    <h2>Transaction Management</h2>
+                </div>
+                <div class="header-right">
+                    <div class="filter-controls">
+                        <select id="transactionFilter">
+                            <option value="all">All Transactions</option>
+                            <option value="cashin">Cash In Only</option>
+                            <option value="cashout">Cash Out Only</option>
+                        </select>
+                        <input type="date" id="dateFilter" />
+                        <button class="btn btn-primary" onclick="openTransactionModal()">
+                            <i class="fas fa-plus"></i> New Transaction
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="data-table-container">
+                <table class="data-table" id="transactionsTable">
+                    <thead>
+                        <tr>
+                            <th>Date/Time</th>
+                            <th>Type</th>
+                            <th>Customer</th>
+                            <th>Amount</th>
+                            <th>Fee</th>
+                            <th>Total</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transactionsTableBody">
+                        <!-- Transactions will be populated by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Customers Page -->
+        <div class="page-content" id="customers-page" style="display: none;">
+            <div class="page-header">
+                <div class="header-left">
+                    <h2>Customer Management</h2>
+                </div>
+                <div class="header-right">
+                    <div class="search-controls">
+                        <input type="text" id="customerSearch" placeholder="Search customers..." />
+                        <button class="btn btn-primary" onclick="openCustomerModal()">
+                            <i class="fas fa-user-plus"></i> Add Customer
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="customers-grid" id="customersGrid">
+                <!-- Customer cards will be populated by JavaScript -->
+            </div>
+        </div>
+
+        <!-- Inventory Page -->
+        <div class="page-content" id="inventory-page" style="display: none;">
+            <div class="page-header">
+                <h2>Inventory Management</h2>
+            </div>
+            
+            <div class="inventory-grid">
+                <div class="inventory-card">
+                    <h3>Cash on Hand</h3>
+                    <div class="balance-amount">₱<span id="cashBalance">0</span></div>
+                    <div class="balance-actions">
+                        <button class="btn btn-success" onclick="adjustBalance('cash', 'add')">Add Cash</button>
+                        <button class="btn btn-danger" onclick="adjustBalance('cash', 'subtract')">Remove Cash</button>
+                    </div>
+                </div>
+                
+                <div class="inventory-card">
+                    <h3>GCash Wallet Balance</h3>
+                    <div class="balance-amount">₱<span id="walletBalance">0</span></div>
+                    <div class="balance-actions">
+                        <button class="btn btn-success" onclick="adjustBalance('gcash', 'add')">Add Balance</button>
+                        <button class="btn btn-danger" onclick="adjustBalance('gcash', 'subtract')">Remove Balance</button>
+                    </div>
+                </div>
+                
+                <div class="inventory-summary">
+                    <h3>Inventory Summary</h3>
+                    <div class="summary-item">
+                        <span>Total Assets:</span>
+                        <span>₱<span id="totalAssets">0</span></span>
+                    </div>
+                    <div class="summary-item">
+                        <span>Available for Cash Out:</span>
+                        <span>₱<span id="availableCashOut">0</span></span>
+                    </div>
+                    <div class="summary-item">
+                        <span>Available for Cash In:</span>
+                        <span>₱<span id="availableCashIn">0</span></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reports Page -->
+        <div class="page-content" id="reports-page" style="display: none;">
+            <div class="page-header">
+                <h2>Reports & Analytics</h2>
+                <div class="date-range-picker">
+                    <input type="date" id="reportStartDate" />
+                    <span>to</span>
+                    <input type="date" id="reportEndDate" />
+                    <button class="btn btn-primary" onclick="generateReport()">Generate Report</button>
+                </div>
+            </div>
+            
+            <div class="reports-grid">
+                <div class="report-card">
+                    <h3>Transaction Summary</h3>
+                    <div id="transactionSummary">
+                        <!-- Report content will be populated by JavaScript -->
+                    </div>
+                </div>
+                
+                <div class="report-card">
+                    <h3>Profit Analysis</h3>
+                    <canvas id="profitChart" width="400" height="200"></canvas>
+                </div>
+                
+                <div class="report-card">
+                    <h3>Customer Activity</h3>
+                    <div id="customerActivity">
+                        <!-- Report content will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Page -->
+        <div class="page-content" id="settings-page" style="display: none;">
+            <div class="page-header">
+                <h2>Settings</h2>
+            </div>
+            
+            <div class="settings-grid">
+                <div class="settings-card">
+                    <h3>Fee Structure</h3>
+                    <div class="fee-settings">
+                        <div class="fee-item">
+                            <label>Cash In Fee (₱50-1000):</label>
+                            <input type="number" id="cashInFee1" value="5" min="0" step="1">
+                        </div>
+                        <div class="fee-item">
+                            <label>Cash In Fee (₱1001-3000):</label>
+                            <input type="number" id="cashInFee2" value="10" min="0" step="1">
+                        </div>
+                        <div class="fee-item">
+                            <label>Cash In Fee (₱3001+):</label>
+                            <input type="number" id="cashInFee3" value="15" min="0" step="1">
+                        </div>
+                        <div class="fee-item">
+                            <label>Cash Out Fee (₱100-1000):</label>
+                            <input type="number" id="cashOutFee1" value="10" min="0" step="1">
+                        </div>
+                        <div class="fee-item">
+                            <label>Cash Out Fee (₱1001-3000):</label>
+                            <input type="number" id="cashOutFee2" value="15" min="0" step="1">
+                        </div>
+                        <div class="fee-item">
+                            <label>Cash Out Fee (₱3001+):</label>
+                            <input type="number" id="cashOutFee3" value="20" min="0" step="1">
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" onclick="saveFeeSettings()">Save Fee Settings</button>
+                </div>
+                
+                <div class="settings-card">
+                    <h3>Data Management</h3>
+                    <div class="data-actions">
+                        <button class="btn btn-success" onclick="exportData()">Export Data</button>
+                        <button class="btn btn-warning" onclick="importData()">Import Data</button>
+                        <button class="btn btn-danger" onclick="clearAllData()">Clear All Data</button>
+                    </div>
+                </div>
+                
+                <div class="settings-card">
+                    <h3>Business Information</h3>
+                    <div class="business-info">
+                        <div class="info-item">
+                            <label>Business Name:</label>
+                            <input type="text" id="businessName" value="GCash Inventory">
+                        </div>
+                        <div class="info-item">
+                            <label>Contact Number:</label>
+                            <input type="tel" id="businessPhone" value="+63 912 345 6789">
+                        </div>
+                        <div class="info-item">
+                            <label>GCash Business Number:</label>
+                            <input type="tel" id="gcashNumber" value="09123456789">
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" onclick="saveBusinessInfo()">Save Business Info</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Transaction Modal -->
+    <div class="modal" id="transactionModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="transactionModalTitle">New Transaction</h3>
+                <button class="modal-close" onclick="closeModal('transactionModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="transactionForm">
+                    <div class="form-group">
+                        <label>Transaction Type</label>
+                        <select id="transactionType" onchange="updateTransactionForm()" required>
+                            <option value="">Select Type</option>
+                            <option value="cashin">Cash In</option>
+                            <option value="cashout">Cash Out</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Customer</label>
+                        <select id="customerSelect" required>
+                            <option value="">Select Customer</option>
+                            <!-- Populated by JavaScript -->
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Amount (₱)</label>
+                        <input type="number" id="transactionAmount" min="50" max="8000" step="1" oninput="calculateFee()" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Fee (₱)</label>
+                        <input type="number" id="transactionFee" readonly>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Total (₱)</label>
+                        <input type="number" id="transactionTotal" readonly>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Reference Number (Optional)</label>
+                        <input type="text" id="referenceNumber" placeholder="GCash reference number">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Notes</label>
+                        <textarea id="transactionNotes" rows="3" placeholder="Additional notes..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('transactionModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="saveTransaction()">Save Transaction</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Customer Modal -->
+    <div class="modal" id="customerModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add New Customer</h3>
+                <button class="modal-close" onclick="closeModal('customerModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="customerForm">
+                    <div class="form-group">
+                        <label>Full Name</label>
+                        <input type="text" id="customerName" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Phone Number</label>
+                        <input type="tel" id="customerPhone" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>GCash Number</label>
+                        <input type="tel" id="customerGCash">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Email (Optional)</label>
+                        <input type="email" id="customerEmail">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Notes</label>
+                        <textarea id="customerNotes" rows="3" placeholder="Additional information..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('customerModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="saveCustomer()">Save Customer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Balance Adjustment Modal -->
+    <div class="modal" id="balanceModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="balanceModalTitle">Adjust Balance</h3>
+                <button class="modal-close" onclick="closeModal('balanceModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="balanceForm">
+                    <div class="form-group">
+                        <label id="balanceTypeLabel">Amount (₱)</label>
+                        <input type="number" id="balanceAmount" min="1" step="0.01" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Reason</label>
+                        <textarea id="balanceReason" rows="3" placeholder="Reason for adjustment..." required></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('balanceModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="saveBalanceAdjustment()">Save Adjustment</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
