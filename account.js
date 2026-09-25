@@ -16,6 +16,8 @@ const DAY_MS = 86400000;
 let currentUser = null;      // { id, email }
 let account = null;          // { profile, subscriptions, settings, requests, notifications, fetchedAt }
 let selectedPlan = null;     // 'monthly' | 'yearly'
+let selectedMethod = null;   // 'gcash' | 'bank'
+let generatedReceipt = null; // { blob, url, receiptNo, plan, method, amount }
 let accountRefreshTimer = null;
 let announcedNotificationIds = new Set();
 
@@ -43,8 +45,16 @@ function inventoryStorageKey() {
 async function startAccount() {
     document.getElementById('loginForm').addEventListener('submit', handleLogin);
     document.getElementById('loginPasswordToggle').addEventListener('click', togglePasswordVisibility);
-    document.getElementById('subProofInput').addEventListener('change', previewProof);
-    document.getElementById('subForm').addEventListener('submit', handleSubscriptionSubmit);
+    const subForm = document.getElementById('subForm');
+    subForm.addEventListener('submit', handleSubscriptionSubmit);
+    subForm.addEventListener('change', event => {
+        if (event.target.name === 'method') selectPaymentMethod(event.target.value);
+    });
+    // Any edit makes the generated receipt out of date
+    subForm.addEventListener('input', event => {
+        if (event.target.name !== 'method') clearReceipt();
+    });
+    document.getElementById('subGenerateReceipt').addEventListener('click', handleGenerateReceipt);
 
     if (!Cloud.hasConfig) {
         showAuthScreen({ notConfigured: true });
@@ -65,10 +75,11 @@ async function startAccount() {
     });
 
     let session = null;
+    let sessionError = null;
     try {
-        session = await Cloud.getSession();
+        ({ session, error: sessionError } = await Cloud.getSession());
     } catch (error) {
-        console.warn('Could not restore session', error);
+        sessionError = error;
     }
 
     if (session?.user) {
@@ -76,13 +87,15 @@ async function startAccount() {
         return;
     }
 
-    // Offline with an expired token: keep working with the last account on this device
-    if (!navigator.onLine && lastUser?.id) {
+    // No internet (or Wi-Fi without data) and the login token needs refreshing:
+    // keep working offline with the last account on this device.
+    const noInternet = !navigator.onLine || Cloud.isNetworkError(sessionError);
+    if (noInternet && lastUser?.id) {
         enterAccount(lastUser);
         return;
     }
 
-    showAuthScreen();
+    showAuthScreen(noInternet ? { message: 'No internet connection. Connect once to sign in.' } : {});
 }
 
 function showAuthScreen({ notConfigured = false, message = '' } = {}) {
@@ -156,6 +169,7 @@ function enterAccount(user) {
     enterInventory();
     renderAccountUI();
     refreshAccount({ announce: true });
+    maybeStartTour(); // waits until the Welcome setup is done (tour.js)
 
     clearInterval(accountRefreshTimer);
     accountRefreshTimer = setInterval(refreshAccount, ACCOUNT_REFRESH_MS);
@@ -169,11 +183,12 @@ async function signOutAccount() {
 }
 
 function leaveAccount(message = '') {
+    endTour({ markDone: false });
     clearInterval(accountRefreshTimer);
     accountRefreshTimer = null;
     currentUser = null;
     account = null;
-    selectedPlan = null;
+    resetPaymentForm();
     try { localStorage.removeItem(LAST_USER_KEY); } catch { /* ignore */ }
 
     document.querySelectorAll('.modal.active').forEach(m => m.classList.remove('active'));
@@ -190,6 +205,15 @@ function leaveAccount(message = '') {
 async function refreshAccount({ announce = false } = {}) {
     if (!currentUser || !Cloud.isReady || !navigator.onLine) return;
     const userId = currentUser.id;
+
+    // Entered offline with an expired token: make sure it can be refreshed first
+    const { session, error: sessionError } = await Cloud.getSession().catch(error => ({ session: null, error }));
+    if (!session) {
+        if (!Cloud.isNetworkError(sessionError) && navigator.onLine && currentUser?.id === userId) {
+            leaveAccount('Your session expired. Please sign in again.');
+        }
+        return;
+    }
 
     let data;
     try {
@@ -242,6 +266,7 @@ window.addEventListener('online', () => refreshAccount());
 // ---------------------------------------------------------------------
 
 const PLAN_LABELS = { monthly: 'Monthly', yearly: 'Yearly', trial: 'Free Trial' };
+const METHOD_LABELS = { gcash: 'GCash', bank: 'Bank Transfer' };
 
 function getSubscriptionState() {
     const subs = account?.subscriptions || [];
@@ -403,7 +428,7 @@ function renderSubscriptionPage() {
         ` : `
             <p class="sub-status-note">${state.status === 'expired'
                 ? `Your access ended on <strong>${formatLongDate(state.endsAt)}</strong>. Your records are safe but read-only until you renew.`
-                : 'Choose Monthly or Yearly below, send your payment via GCash, and upload the receipt.'}</p>
+                : 'Choose Monthly or Yearly below, pay via GCash or bank transfer, then send us your receipt.'}</p>
         `}
         ${!account ? '<p class="sub-status-note">Connect to the internet to load your subscription.</p>' : ''}
     `;
@@ -416,7 +441,7 @@ function renderSubscriptionPage() {
             <span class="sub-pending-icon">${icon('clock')}</span>
             <div class="sub-pending-body">
                 <strong>Payment under review</strong>
-                <span>${PLAN_LABELS[p.plan]} · ${peso(p.amount)} · Ref ${escapeHtml(p.payment_reference)}</span>
+                <span>${PLAN_LABELS[p.plan]} · ${peso(p.amount)} · ${METHOD_LABELS[p.payment_method] || 'GCash'} Ref ${escapeHtml(p.payment_reference)}</span>
                 <small>Submitted ${formatLongDate(p.created_at)}. You'll get a notification once the admin approves it.</small>
             </div>
         `;
@@ -456,18 +481,85 @@ function renderPlanOptions() {
     form.hidden = !selectedPlan;
     if (!selectedPlan) return;
 
+    renderPaymentMethod();
+}
+
+// Where to send the money, for the chosen method
+function paymentDestination(method) {
+    const s = account?.settings || {};
+    if (method === 'bank') {
+        return {
+            available: Boolean(s.payment_bank_name && s.payment_bank_account_number),
+            rows: [
+                ['Bank', s.payment_bank_name || '—'],
+                ['Account name', s.payment_bank_account_name || '—'],
+                ['Account number', s.payment_bank_account_number || '—']
+            ]
+        };
+    }
+    return {
+        available: true,
+        rows: [
+            ['Account name', s.payment_gcash_name || 'Ask the admin for the GCash name'],
+            ['GCash number', s.payment_gcash_number || '—']
+        ]
+    };
+}
+
+function renderPaymentMethod() {
+    const bankOption = document.querySelector('#subForm input[name="method"][value="bank"]');
+    const bankAvailable = paymentDestination('bank').available;
+    bankOption.disabled = !bankAvailable;
+    bankOption.closest('.method-option').querySelector('small').textContent =
+        bankAvailable ? 'InstaPay / PESONet' : 'Not available yet';
+    if (selectedMethod === 'bank' && !bankAvailable) selectedMethod = null;
+
+    document.querySelectorAll('#subForm input[name="method"]').forEach(input => {
+        input.checked = input.value === selectedMethod;
+    });
+    document.getElementById('subFormBody').hidden = !selectedMethod;
+    if (!selectedMethod) return;
+
+    const isBank = selectedMethod === 'bank';
+    const amount = planPrice(selectedPlan);
+    if (generatedReceipt && generatedReceipt.amount !== amount) clearReceipt(); // price changed meanwhile
+
+    document.getElementById('subPayTitle').textContent = isBank ? 'Send via bank transfer' : 'Send via GCash';
+    document.getElementById('subPayIcon').innerHTML = `<use href="#i-${isBank ? 'store' : 'phone-device'}"/>`;
+    document.getElementById('subPayAmount').textContent = peso(amount);
+    document.getElementById('subPayRows').innerHTML = paymentDestination(selectedMethod).rows
+        .map(([label, value]) => `<div><span>${label}</span><strong>${escapeHtml(value)}</strong></div>`)
+        .join('');
+
     const s = account.settings || {};
-    document.getElementById('subPayAmount').textContent = peso(planPrice(selectedPlan));
-    document.getElementById('subPayName').textContent = s.payment_gcash_name || 'Ask the admin for the GCash name';
-    document.getElementById('subPayNumber').textContent = s.payment_gcash_number || '—';
     const instructions = document.getElementById('subPayInstructions');
     instructions.textContent = s.payment_instructions || '';
     instructions.hidden = !s.payment_instructions;
-    document.getElementById('subSubmitLabel').textContent = `Submit ${PLAN_LABELS[selectedPlan]} Payment`;
+
+    document.getElementById('subBankGroup').hidden = !isBank;
+    document.getElementById('subSenderNameLabel').textContent = isBank ? 'Sender Account Name' : 'Sender GCash Name';
+    document.getElementById('subSenderAccountLabel').textContent = isBank ? 'Sender Account Number' : 'Sender GCash Number';
+    document.getElementById('subSenderAccount').placeholder = isBank ? 'Account number you paid from' : '09XX XXX XXXX';
+    document.getElementById('subReferenceLabel').textContent = isBank ? 'Bank Reference / Trace No.' : 'GCash Reference No.';
+    document.getElementById('subReference').placeholder = isBank ? 'Reference number on your transfer' : '13-digit reference number';
+}
+
+function selectPaymentMethod(method) {
+    if (method === selectedMethod) return;
+    selectedMethod = method;
+    clearReceipt();
+    renderPaymentMethod();
+
+    const form = document.getElementById('subForm');
+    if (!form.elements.senderName.value) form.elements.senderName.value = form.elements.fullName.value;
+    // A GCash number and a bank account number are never the same thing
+    form.elements.senderAccount.value = method === 'gcash' ? form.elements.phone.value : '';
+    form.elements.senderBank.value = '';
 }
 
 function selectPlan(plan) {
     const firstSelection = !selectedPlan;
+    if (plan !== selectedPlan) clearReceipt();
     selectedPlan = plan;
     renderPlanOptions();
 
@@ -496,7 +588,7 @@ function renderPaymentHistory() {
         <div class="sub-history-row">
             <div class="sub-history-main">
                 <strong>${PLAN_LABELS[r.plan]} · ${peso(r.amount)}</strong>
-                <span>${formatLongDate(r.created_at)} · Ref ${escapeHtml(r.payment_reference)}</span>
+                <span>${formatLongDate(r.created_at)} · ${METHOD_LABELS[r.payment_method] || 'GCash'} Ref ${escapeHtml(r.payment_reference)}</span>
                 ${r.admin_note ? `<small>Admin: ${escapeHtml(r.admin_note)}</small>` : ''}
             </div>
             <span class="status-chip status-${r.status}">${labels[r.status]}</span>
@@ -505,66 +597,121 @@ function renderPaymentHistory() {
 }
 
 // ---------------------------------------------------------------------
-// Payment form
+// Payment form & receipt
 // ---------------------------------------------------------------------
 
-const MAX_PROOF_BYTES = 5 * 1024 * 1024;
+function readPaymentForm() {
+    const f = document.getElementById('subForm').elements;
+    return {
+        plan: selectedPlan,
+        method: selectedMethod,
+        fullName: f.fullName.value.trim(),
+        phone: f.phone.value.trim(),
+        businessName: f.businessName.value.trim(),
+        address: f.address.value.trim(),
+        senderName: f.senderName.value.trim(),
+        senderAccount: f.senderAccount.value.trim(),
+        senderBank: selectedMethod === 'bank' ? f.senderBank.value.trim() : '',
+        reference: f.reference.value.trim()
+    };
+}
 
-function previewProof() {
-    const file = this.files[0];
-    const preview = document.getElementById('subProofPreview');
-    const drop = document.getElementById('subProofDrop');
+function paymentFormProblem(values) {
+    if (!values.plan) return 'Choose a plan first.';
+    if (!values.method) return 'Choose GCash or Bank Transfer.';
+    if (!values.fullName || !values.phone) return 'Please fill in your name and mobile number.';
+    if (values.method === 'bank' && !values.senderBank) return 'Please enter the bank you paid from.';
+    if (!values.senderName || !values.senderAccount) return 'Please fill in the account you paid from.';
+    if (values.reference.length < 4) return 'Please enter the reference number of your payment.';
+    return '';
+}
 
-    if (!file) {
-        preview.hidden = true;
-        drop.classList.remove('has-file');
+function newReceiptNo() {
+    const now = new Date();
+    const date = localDateString(now).replace(/-/g, '');
+    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    const bytes = crypto.getRandomValues(new Uint8Array(6));
+    const code = Array.from(bytes, b => alphabet[b % alphabet.length]).join('');
+    return `CG-${date}-${code}`;
+}
+
+function clearReceipt() {
+    if (!generatedReceipt) return;
+    URL.revokeObjectURL(generatedReceipt.url);
+    generatedReceipt = null;
+    document.getElementById('subReceiptPreview').hidden = true;
+    document.getElementById('subReceiptImage').removeAttribute('src');
+    document.getElementById('subSubmit').disabled = true;
+    document.getElementById('subSubmitNote').textContent =
+        'Generate your receipt first, then send it. The admin will check your payment and activate your plan.';
+}
+
+function resetPaymentForm() {
+    clearReceipt();
+    selectedPlan = null;
+    selectedMethod = null;
+    document.getElementById('subForm').reset();
+    document.getElementById('subFormBody').hidden = true;
+}
+
+async function handleGenerateReceipt() {
+    if (!currentUser || !account) return;
+    const values = readPaymentForm();
+    const problem = paymentFormProblem(values);
+    if (problem) {
+        showNotification(problem, 'error');
         return;
     }
-    if (!file.type.startsWith('image/')) {
-        showNotification('Please choose an image (screenshot or photo of your receipt).', 'error');
-        this.value = '';
-        return;
-    }
-    if (file.size > MAX_PROOF_BYTES) {
-        showNotification('Image is too large. Please use one under 5 MB.', 'error');
-        this.value = '';
-        return;
-    }
 
-    const img = preview.querySelector('img');
-    if (img.dataset.url) URL.revokeObjectURL(img.dataset.url);
-    img.dataset.url = URL.createObjectURL(file);
-    img.src = img.dataset.url;
-    preview.querySelector('span').textContent = file.name;
-    preview.hidden = false;
-    drop.classList.add('has-file');
+    const button = document.getElementById('subGenerateReceipt');
+    button.disabled = true;
+    try {
+        clearReceipt();
+        const receiptNo = newReceiptNo();
+        const amount = planPrice(values.plan);
+        const blob = await renderReceiptPng({
+            ...values,
+            receiptNo,
+            amount,
+            email: currentUser.email,
+            issuedAt: new Date(),
+            destination: paymentDestination(values.method).rows
+        });
+
+        generatedReceipt = { blob, url: URL.createObjectURL(blob), receiptNo, amount };
+        document.getElementById('subReceiptImage').src = generatedReceipt.url;
+        const download = document.getElementById('subReceiptDownload');
+        download.href = generatedReceipt.url;
+        download.download = `CashG-Receipt-${receiptNo}.png`;
+        document.getElementById('subReceiptPreview').hidden = false;
+        document.getElementById('subSubmit').disabled = false;
+        document.getElementById('subSubmitNote').textContent =
+            'Check your receipt, then send it. Editing any detail means generating it again.';
+        document.getElementById('subReceiptPreview').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } catch (error) {
+        console.error('Could not generate receipt', error);
+        showNotification('Could not generate the receipt. Please try again.', 'error');
+    } finally {
+        button.disabled = false;
+    }
 }
 
 async function handleSubscriptionSubmit(event) {
     event.preventDefault();
     if (!currentUser || !selectedPlan) return;
 
-    const form = event.target;
-    const file = document.getElementById('subProofInput').files[0];
-    const values = {
-        plan: selectedPlan,
-        fullName: form.elements.fullName.value.trim(),
-        phone: form.elements.phone.value.trim(),
-        businessName: form.elements.businessName.value.trim(),
-        address: form.elements.address.value.trim(),
-        reference: form.elements.reference.value.trim()
-    };
-
-    if (!values.fullName || !values.phone || !values.reference) {
-        showNotification('Please fill in your name, mobile number and GCash reference number.', 'error');
+    const values = readPaymentForm();
+    const problem = paymentFormProblem(values);
+    if (problem) {
+        showNotification(problem, 'error');
         return;
     }
-    if (!file) {
-        showNotification('Please attach your payment proof.', 'error');
+    if (!generatedReceipt) {
+        showNotification('Tap "Generate Receipt" first.', 'error');
         return;
     }
     if (!navigator.onLine) {
-        showNotification('You are offline. Connect to the internet to submit your payment.', 'error');
+        showNotification('You are offline. Connect to the internet to send your receipt.', 'error');
         return;
     }
 
@@ -573,20 +720,243 @@ async function handleSubscriptionSubmit(event) {
     button.classList.add('is-loading');
 
     try {
-        await Cloud.submitSubscriptionRequest(currentUser.id, values, file);
-        form.reset();
-        document.getElementById('subProofPreview').hidden = true;
-        document.getElementById('subProofDrop').classList.remove('has-file');
-        selectedPlan = null;
-        showNotification('Payment submitted! We\'ll notify you once it\'s approved.', 'success');
+        await Cloud.submitSubscriptionRequest(
+            currentUser.id,
+            { ...values, receiptNo: generatedReceipt.receiptNo },
+            generatedReceipt.blob
+        );
+        resetPaymentForm();
+        showNotification('Receipt sent! We\'ll notify you once your payment is approved.', 'success');
         await refreshAccount();
         window.scrollTo(0, 0);
     } catch (error) {
         showNotification(Cloud.friendlyError(error), 'error');
+        button.disabled = !generatedReceipt;
     } finally {
-        button.disabled = false;
         button.classList.remove('is-loading');
     }
+}
+
+// --- Receipt image (canvas → PNG) ------------------------------------
+
+const RECEIPT_WIDTH = 720;
+const RECEIPT_SCALE = 2;
+const RECEIPT_FONT = "'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
+
+function loadImage(src) {
+    return new Promise(resolve => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => resolve(null);
+        img.src = src;
+    });
+}
+
+function receiptPeso(value) {
+    return '₱' + Number(value || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function wrapText(ctx, text, maxWidth) {
+    const lines = [];
+    let line = '';
+    for (const word of String(text).split(/\s+/)) {
+        const test = line ? `${line} ${word}` : word;
+        if (ctx.measureText(test).width <= maxWidth || !line) {
+            line = test;
+        } else {
+            lines.push(line);
+            line = word;
+        }
+        // A single word longer than the column: break it by characters
+        while (ctx.measureText(line).width > maxWidth && line.length > 1) {
+            let cut = line.length - 1;
+            while (cut > 1 && ctx.measureText(line.slice(0, cut)).width > maxWidth) cut--;
+            lines.push(line.slice(0, cut));
+            line = line.slice(cut);
+        }
+    }
+    if (line) lines.push(line);
+    return lines.length ? lines : [''];
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+}
+
+// Draws the receipt and returns its height. With draw = false it only measures.
+function drawReceipt(ctx, r, logo, draw) {
+    const W = RECEIPT_WIDTH;
+    const PAD = 48;
+    const font = (weight, size) => `${weight} ${size}px ${RECEIPT_FONT}`;
+    const ink = '#04263d', ink2 = '#445a6e', ink3 = '#8797a8', line = '#e6eaf1', brand = '#03955f';
+    let y = 0;
+
+    // Header
+    const headerH = 132;
+    if (draw) {
+        const grad = ctx.createLinearGradient(0, 0, W, headerH);
+        grad.addColorStop(0, '#04ad72');
+        grad.addColorStop(1, '#0b8464');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, W, headerH);
+
+        let textX = PAD;
+        if (logo) {
+            ctx.fillStyle = '#ffffff';
+            roundRect(ctx, PAD, 34, 64, 64, 16);
+            ctx.fill();
+            ctx.drawImage(logo, PAD + 8, 42, 48, 48);
+            textX = PAD + 84;
+        }
+        ctx.fillStyle = '#ffffff';
+        ctx.textBaseline = 'alphabetic';
+        ctx.textAlign = 'left';
+        ctx.font = font(800, 30);
+        ctx.fillText('CashG', textX, 66);
+        ctx.font = font(500, 16);
+        ctx.fillStyle = 'rgba(255,255,255,0.85)';
+        ctx.fillText('Subscription Payment Receipt', textX, 92);
+
+        ctx.textAlign = 'right';
+        ctx.font = font(600, 13);
+        ctx.fillText('RECEIPT NO.', W - PAD, 58);
+        ctx.font = font(700, 17);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(r.receiptNo, W - PAD, 82);
+    }
+    y = headerH + 44;
+
+    // Amount
+    if (draw) {
+        ctx.textAlign = 'center';
+        ctx.fillStyle = ink3;
+        ctx.font = font(600, 15);
+        ctx.fillText('AMOUNT PAID', W / 2, y);
+        ctx.fillStyle = ink;
+        ctx.font = font(800, 48);
+        ctx.fillText(receiptPeso(r.amount), W / 2, y + 56);
+        ctx.fillStyle = ink2;
+        ctx.font = font(500, 16);
+        ctx.fillText(`${PLAN_LABELS[r.plan]} plan · ${r.plan === 'monthly' ? '1 month' : '1 year'} access`, W / 2, y + 86);
+
+        // Status pill
+        ctx.font = font(700, 13);
+        const pill = 'PENDING VERIFICATION';
+        const pw = ctx.measureText(pill).width + 32;
+        ctx.fillStyle = '#fff4e0';
+        roundRect(ctx, (W - pw) / 2, y + 104, pw, 30, 15);
+        ctx.fill();
+        ctx.fillStyle = '#b45309';
+        ctx.fillText(pill, W / 2, y + 124);
+    }
+    y += 166;
+
+    const section = title => {
+        if (draw) {
+            ctx.strokeStyle = line;
+            ctx.lineWidth = 1;
+            ctx.setLineDash([6, 6]);
+            ctx.beginPath();
+            ctx.moveTo(PAD, y);
+            ctx.lineTo(W - PAD, y);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.textAlign = 'left';
+            ctx.fillStyle = brand;
+            ctx.font = font(700, 13);
+            ctx.fillText(title.toUpperCase(), PAD, y + 34);
+        }
+        y += 52;
+    };
+
+    const labelW = 200;
+    const valueW = W - PAD * 2 - labelW - 16;
+    const row = (label, value) => {
+        ctx.font = font(600, 16);
+        const lines = wrapText(ctx, value || '—', valueW);
+        if (draw) {
+            ctx.textAlign = 'right';
+            ctx.fillStyle = ink;
+            lines.forEach((text, i) => ctx.fillText(text, W - PAD, y + 12 + i * 23));
+            ctx.textAlign = 'left';
+            ctx.fillStyle = ink2;
+            ctx.font = font(500, 15);
+            ctx.fillText(label, PAD, y + 12);
+        }
+        y += 23 * lines.length + 14;
+    };
+
+    const issued = r.issuedAt.toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' });
+
+    section('Payment');
+    row('Payment method', r.method === 'bank' ? 'Bank Transfer' : 'GCash (E-wallet)');
+    row('Reference no.', r.reference);
+    row('Date issued', issued);
+
+    section('Paid to');
+    r.destination.forEach(([label, value]) => row(label, value));
+
+    section('Paid from');
+    if (r.method === 'bank') row('Bank', r.senderBank);
+    row('Account name', r.senderName);
+    row(r.method === 'bank' ? 'Account number' : 'GCash number', r.senderAccount);
+
+    section('Customer');
+    row('Full name', r.fullName);
+    row('Mobile', r.phone);
+    row('Email', r.email);
+    if (r.businessName) row('Business', r.businessName);
+    if (r.address) row('Address', r.address);
+
+    // Footer
+    y += 8;
+    if (draw) {
+        ctx.fillStyle = '#f5f8f7';
+        ctx.fillRect(0, y, W, 96);
+        ctx.textAlign = 'center';
+        ctx.fillStyle = ink2;
+        ctx.font = font(500, 14);
+        ctx.fillText('Your plan is activated once the CashG admin verifies this payment.', W / 2, y + 40);
+        ctx.fillStyle = ink3;
+        ctx.font = font(500, 13);
+        ctx.fillText(`Generated in the CashG app · ${r.receiptNo}`, W / 2, y + 64);
+    }
+    y += 96;
+
+    return y;
+}
+
+async function renderReceiptPng(receipt) {
+    try {
+        await Promise.all([
+            document.fonts.load(`500 16px ${RECEIPT_FONT}`),
+            document.fonts.load(`700 16px ${RECEIPT_FONT}`),
+            document.fonts.load(`800 16px ${RECEIPT_FONT}`)
+        ]);
+    } catch { /* offline: system font is fine */ }
+    const logo = await loadImage('icons/logo-mark.png');
+
+    const measure = document.createElement('canvas').getContext('2d');
+    const height = drawReceipt(measure, receipt, logo, false);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = RECEIPT_WIDTH * RECEIPT_SCALE;
+    canvas.height = height * RECEIPT_SCALE;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(RECEIPT_SCALE, RECEIPT_SCALE);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, RECEIPT_WIDTH, height);
+    drawReceipt(ctx, receipt, logo, true);
+
+    return new Promise((resolve, reject) => {
+        canvas.toBlob(blob => (blob ? resolve(blob) : reject(new Error('toBlob failed'))), 'image/png');
+    });
 }
 
 // ---------------------------------------------------------------------

@@ -72,6 +72,7 @@
         <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></symbol>
         <symbol id="i-eye-off" viewBox="0 0 24 24"><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.53 13.53 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><path d="m2 2 20 20"/></symbol>
         <symbol id="i-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></symbol>
+        <symbol id="i-wifi-off" viewBox="0 0 24 24"><path d="M12 20h.01"/><path d="M8.5 16.43a5 5 0 0 1 7 0"/><path d="M2 8.82a15 15 0 0 1 4.17-2.65"/><path d="M10.66 5c4.01-.36 8.14.9 11.34 3.76"/><path d="M16.85 11.25a10 10 0 0 1 2.22 1.68"/><path d="M5 12.86a10 10 0 0 1 5.17-2.69"/><path d="m2 2 20 20"/></symbol>
     </svg>
 
     <!-- Sign-in screen (accounts are created by the admin) -->
@@ -238,6 +239,10 @@
                 </div>
             </div>
             <div class="header-actions">
+                <span class="net-pill" id="netPill" role="status" hidden>
+                    <svg class="icon"><use href="#i-wifi-off"/></svg>
+                    <span>Offline</span>
+                </span>
                 <button type="button" class="header-bell" id="notifBell" onclick="openNotifications()" aria-label="Notifications">
                     <svg class="icon"><use href="#i-bell"/></svg>
                     <span class="bell-badge" id="notifBadge" hidden>0</span>
@@ -667,18 +672,36 @@
                         <div class="plan-options" id="planOptions"></div>
 
                         <form class="sub-form" id="subForm" hidden novalidate>
+                            <h4 class="sub-form-step sub-form-step-first">Step 1 · Payment method</h4>
+                            <div class="method-options" role="radiogroup" aria-label="Payment method">
+                                <label class="method-option">
+                                    <input type="radio" name="method" value="gcash">
+                                    <span class="method-icon method-icon-gcash"><svg class="icon"><use href="#i-phone-device"/></svg></span>
+                                    <span class="method-text">
+                                        <strong>GCash</strong>
+                                        <small>E-wallet</small>
+                                    </span>
+                                </label>
+                                <label class="method-option">
+                                    <input type="radio" name="method" value="bank">
+                                    <span class="method-icon method-icon-bank"><svg class="icon"><use href="#i-store"/></svg></span>
+                                    <span class="method-text">
+                                        <strong>Bank Transfer</strong>
+                                        <small>InstaPay / PESONet</small>
+                                    </span>
+                                </label>
+                            </div>
+
+                            <div class="sub-form-body" id="subFormBody" hidden>
                             <div class="pay-box">
                                 <div class="pay-box-head">
-                                    <span class="pay-box-icon"><svg class="icon"><use href="#i-phone-device"/></svg></span>
+                                    <span class="pay-box-icon"><svg class="icon" id="subPayIcon"><use href="#i-phone-device"/></svg></span>
                                     <div>
-                                        <small>Step 1 · Send via GCash</small>
+                                        <small id="subPayTitle">Send via GCash</small>
                                         <strong id="subPayAmount">₱0</strong>
                                     </div>
                                 </div>
-                                <div class="pay-box-rows">
-                                    <div><span>Account name</span><strong id="subPayName">—</strong></div>
-                                    <div><span>GCash number</span><strong id="subPayNumber">—</strong></div>
-                                </div>
+                                <div class="pay-box-rows" id="subPayRows"></div>
                                 <p class="pay-box-note" id="subPayInstructions" hidden></p>
                             </div>
 
@@ -702,29 +725,49 @@
                                 <input type="text" id="subAddress" name="address" autocomplete="street-address" placeholder="Barangay, City / Municipality">
                             </div>
 
-                            <h4 class="sub-form-step">Step 3 · Payment proof</h4>
-                            <div class="form-group">
-                                <label for="subReference">GCash Reference No.</label>
-                                <input type="text" id="subReference" name="reference" inputmode="numeric" placeholder="13-digit reference number" required>
+                            <h4 class="sub-form-step">Step 3 · Proof of payment</h4>
+                            <div class="form-group" id="subBankGroup" hidden>
+                                <label for="subSenderBank">Your Bank</label>
+                                <input type="text" id="subSenderBank" name="senderBank" list="subBankList" placeholder="e.g. BDO, BPI, Landbank">
+                                <datalist id="subBankList">
+                                    <option value="BDO"><option value="BPI"><option value="Metrobank"><option value="Landbank">
+                                    <option value="PNB"><option value="Security Bank"><option value="UnionBank"><option value="RCBC">
+                                    <option value="Chinabank"><option value="EastWest"><option value="Maya Bank"><option value="SeaBank">
+                                    <option value="GoTyme"><option value="CIMB">
+                                </datalist>
                             </div>
-                            <label class="proof-drop" id="subProofDrop" for="subProofInput">
-                                <input type="file" id="subProofInput" accept="image/*">
-                                <span class="proof-drop-icon"><svg class="icon"><use href="#i-image"/></svg></span>
-                                <span class="proof-drop-text">
-                                    <strong>Upload receipt screenshot</strong>
-                                    <small>JPG or PNG, up to 5 MB</small>
-                                </span>
-                            </label>
-                            <div class="proof-preview" id="subProofPreview" hidden>
-                                <img alt="Payment proof preview">
-                                <span></span>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="subSenderName" id="subSenderNameLabel">Sender Account Name</label>
+                                    <input type="text" id="subSenderName" name="senderName" placeholder="Name on the account you paid from" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="subSenderAccount" id="subSenderAccountLabel">Sender GCash Number</label>
+                                    <input type="text" id="subSenderAccount" name="senderAccount" inputmode="numeric" placeholder="09XX XXX XXXX" required>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="subReference" id="subReferenceLabel">GCash Reference No.</label>
+                                <input type="text" id="subReference" name="reference" placeholder="13-digit reference number" autocomplete="off" required>
                             </div>
 
-                            <button type="submit" class="btn btn-primary btn-block" id="subSubmit">
-                                <span class="btn-spinner" aria-hidden="true"></span>
-                                <span id="subSubmitLabel">Submit Payment</span>
+                            <h4 class="sub-form-step">Step 4 · Receipt</h4>
+                            <button type="button" class="btn btn-secondary btn-block" id="subGenerateReceipt">
+                                <svg class="icon"><use href="#i-receipt"/></svg> Generate Receipt
                             </button>
-                            <p class="sub-form-note">The admin will check your payment and activate your plan. You'll get a notification here.</p>
+                            <div class="receipt-preview" id="subReceiptPreview" hidden>
+                                <img id="subReceiptImage" alt="Generated payment receipt">
+                                <a class="btn btn-secondary btn-sm" id="subReceiptDownload" download>
+                                    <svg class="icon"><use href="#i-download"/></svg> Save PNG
+                                </a>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary btn-block" id="subSubmit" disabled>
+                                <span class="btn-spinner" aria-hidden="true"></span>
+                                <span id="subSubmitLabel">Send Receipt to Admin</span>
+                            </button>
+                            <p class="sub-form-note" id="subSubmitNote">Generate your receipt first, then send it. The admin will check your payment and activate your plan.</p>
+                            </div>
                         </form>
                     </section>
                 </div>
@@ -894,6 +937,14 @@
                             <span class="btn-content">
                                 <span class="btn-title">Install CashG App</span>
                                 <span class="btn-subtitle">Add to home screen, works offline</span>
+                            </span>
+                            <svg class="icon data-action-chevron"><use href="#i-chevron"/></svg>
+                        </button>
+                        <button class="data-action-btn" onclick="replayTour()">
+                            <span class="data-action-icon icon-tone-green"><svg class="icon"><use href="#i-info"/></svg></span>
+                            <span class="btn-content">
+                                <span class="btn-title">How to use CashG</span>
+                                <span class="btn-subtitle">Replay the quick app tour</span>
                             </span>
                             <svg class="icon data-action-chevron"><use href="#i-chevron"/></svg>
                         </button>
@@ -1122,6 +1173,13 @@
                     <svg class="icon"><use href="#i-x"/></svg>
                 </button>
             </div>
+            <div class="notif-net-note" id="notifNetNote" hidden>
+                <svg class="icon"><use href="#i-wifi-off"/></svg>
+                <div>
+                    <strong>You're offline</strong>
+                    <span>Connect to the internet to see new notifications. <span data-last-sync></span></span>
+                </div>
+            </div>
             <div class="modal-body notif-list" id="notificationsList"></div>
         </div>
     </div>
@@ -1156,5 +1214,7 @@
     <script src="cloud.js"></script>
     <script src="script.js"></script>
     <script src="account.js"></script>
+    <script src="tour.js"></script>
+    <script src="connectivity.js"></script>
 </body>
 </html>

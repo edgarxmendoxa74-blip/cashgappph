@@ -86,6 +86,31 @@ window.CASHG_CONFIG = {
 > The **publishable** (anon) key is meant to be public. **Never** put a secret key (`sb_secret_…`) or the `service_role` key in
 > any file of this project.
 
+## 6b. Receipt images on ImageKit (optional)
+
+Payment receipts are PNG images the app generates. They are uploaded to
+**ImageKit** when it's set up, otherwise to the private `payment-proofs` bucket
+in Supabase. Both show up in **Admin → Payments**.
+
+1. Create a free account at <https://imagekit.io> → **Developer options**.
+   Copy the **Public key** and the **Private key**.
+2. Deploy the upload-signing function (same way as `admin-users`, JWT
+   verification **off**), named exactly `imagekit-auth`, from
+   [`supabase/functions/imagekit-auth/index.ts`](supabase/functions/imagekit-auth/index.ts):
+
+   ```bash
+   npx supabase functions deploy imagekit-auth --no-verify-jwt
+   ```
+
+3. Give it the private key: Supabase → **Edge Functions → Secrets** → add
+   `IMAGEKIT_PRIVATE_KEY` = your private key (or
+   `npx supabase secrets set IMAGEKIT_PRIVATE_KEY=private_...`).
+4. Put the **public** key in [`config.js`](config.js): `imagekitPublicKey: 'public_...'`.
+
+> The private key must only live in the Edge Function secrets, never in `config.js`.
+> Receipts are stored under `/cashg/receipts/<user id>/` with a random file name.
+> ImageKit URLs are public to anyone who has the link, so don't share them.
+
 ## 7. Put it online
 
 Upload the whole folder to any static host with HTTPS: Netlify, Vercel,
@@ -97,8 +122,9 @@ Cloudflare Pages or GitHub Pages. No build step.
 ## 8. First run
 
 1. Open `/admin/` and sign in with your admin account.
-2. **Settings:** set the Monthly and Yearly prices and **your GCash name and number**
-   (users see these when they pay).
+2. **Settings:** set the Monthly and Yearly prices, **your GCash name and number**,
+   and (optional) **your bank, account name and account number** (users see these
+   when they pay). Leave the bank blank to offer GCash only.
 3. **New Account:** create a login for a customer. Choose "No plan yet" (they pay
    in the app) or give a free trial. Copy the message with their email and
    password and send it to them.
@@ -106,19 +132,40 @@ Cloudflare Pages or GitHub Pages. No build step.
 ## How subscriptions work
 
 1. The user signs in to the app → **Subscription** → chooses **Monthly** or **Yearly**.
-2. They send the amount to your GCash, then fill in the form: name, mobile,
-   business, address, GCash reference no., and a **screenshot of the receipt**.
-3. It shows up in **Admin → Payments** as *Pending*. Open it to see the details and
-   the receipt, then **Approve** or **Reject** (with an optional note).
-4. Approving adds 1 month or 1 year, starting after their current plan ends. The
+2. They pick **GCash** or **Bank Transfer**, send the amount to the account shown,
+   then fill in the form: name, mobile, business, address, the account they paid
+   from, and the **reference number** of the payment.
+3. They tap **Generate Receipt** to create a PNG receipt with all the details
+   (they can save it), then **Send Receipt to Admin**.
+4. It shows up in **Admin → Payments** as *Pending*. Open it to see the details and
+   the receipt image, check the reference number against your GCash / bank
+   history, then **Approve** or **Reject** (with an optional note).
+5. Approving adds 1 month or 1 year, starting after their current plan ends. The
    user gets a notification in the app, and the Subscription page shows the dates
    and days left.
-5. Reminders appear in the app 7 days before expiry. When a plan expires, the
+6. Reminders appear in the app 7 days before expiry. When a plan expires, the
    inventory becomes **read-only** until they renew. Their records are never deleted.
 
 You can also add time manually (cash payment, free extension), end access, reset
 a password, disable an account, or send a message from **Admin → Accounts →
 (click a user)**.
+
+## Announcements
+
+**Admin → Notifications** sends an announcement to many users at once. It shows
+up in each user's bell next to their payment updates.
+
+- Pick a kind (**Announcement**, **Update**, **Reminder** or **Urgent**), write a
+  title and message, and choose who gets it: all users, users with an active plan,
+  users whose plan expired, or users who never had a plan.
+- The **Sent announcements** list shows how many users got each one and how many
+  opened it. Deleting an announcement removes it from every user's notifications.
+- Only users who exist when you send it receive it. Accounts created later won't
+  see older announcements.
+
+If you set up the database before this feature existed, run the
+"Announcements" part of [`supabase/schema.sql`](supabase/schema.sql) once in the
+SQL Editor. Running the whole file again also works.
 
 ## Updating the app later
 

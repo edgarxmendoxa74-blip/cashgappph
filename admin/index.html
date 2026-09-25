@@ -39,6 +39,9 @@
         <symbol id="i-mail" viewBox="0 0 24 24"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></symbol>
         <symbol id="i-lock" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
         <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+        <symbol id="i-megaphone" viewBox="0 0 24 24"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></symbol>
+        <symbol id="i-send" viewBox="0 0 24 24"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></symbol>
+        <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></symbol>
     </svg>
 
     <!-- ============ Sign in ============ -->
@@ -82,6 +85,7 @@
                 <button type="button" data-view="accounts"><svg class="icon"><use href="#i-users"/></svg><span>Accounts</span></button>
                 <button type="button" data-view="payments"><svg class="icon"><use href="#i-receipt"/></svg><span>Payments</span><em class="nav-count" id="navPendingCount" hidden>0</em></button>
                 <button type="button" data-view="subscriptions"><svg class="icon"><use href="#i-crown"/></svg><span>Subscriptions</span></button>
+                <button type="button" data-view="notifications"><svg class="icon"><use href="#i-megaphone"/></svg><span>Notifications</span></button>
                 <button type="button" data-view="settings"><svg class="icon"><use href="#i-settings"/></svg><span>Settings</span></button>
             </nav>
             <div class="side-foot">
@@ -165,7 +169,7 @@
                 <div class="panel panel-flush">
                     <table class="table">
                         <thead>
-                            <tr><th>Submitted</th><th>Customer</th><th>Plan</th><th>Amount</th><th>GCash Ref</th><th>Status</th></tr>
+                            <tr><th>Submitted</th><th>Customer</th><th>Plan</th><th>Amount</th><th>Method · Ref</th><th>Status</th></tr>
                         </thead>
                         <tbody id="paymentsBody"></tbody>
                     </table>
@@ -199,6 +203,61 @@
                 </div>
             </section>
 
+            <!-- Notifications / announcements -->
+            <section class="view" data-view="notifications" hidden>
+                <div class="notify-layout">
+                    <form class="panel notify-compose" id="announceForm" novalidate>
+                        <div class="panel-head"><h2>New announcement</h2></div>
+                        <p class="muted small notify-intro">Appears in the bell of every user you choose, like payment updates do.</p>
+
+                        <div class="field">
+                            <span>Kind</span>
+                            <div class="kind-picker" id="announceType" role="radiogroup" aria-label="Kind">
+                                <button type="button" class="kind kind-info active" data-type="info" role="radio" aria-checked="true"><svg class="icon"><use href="#i-megaphone"/></svg><span>Announcement</span></button>
+                                <button type="button" class="kind kind-success" data-type="success" role="radio" aria-checked="false"><svg class="icon"><use href="#i-check"/></svg><span>Update</span></button>
+                                <button type="button" class="kind kind-warning" data-type="warning" role="radio" aria-checked="false"><svg class="icon"><use href="#i-clock"/></svg><span>Reminder</span></button>
+                                <button type="button" class="kind kind-error" data-type="error" role="radio" aria-checked="false"><svg class="icon"><use href="#i-alert"/></svg><span>Urgent</span></button>
+                            </div>
+                        </div>
+
+                        <label class="field"><span>Title</span><input type="text" id="announceTitle" maxlength="120" placeholder="e.g. New feature: daily reports"></label>
+                        <label class="field">
+                            <span>Message</span>
+                            <textarea id="announceBody" rows="4" maxlength="1000" placeholder="What do users need to know?"></textarea>
+                            <small class="field-hint" id="announceBodyCount">0 / 1000</small>
+                        </label>
+                        <label class="field">
+                            <span>Send to</span>
+                            <select id="announceAudience">
+                                <option value="all">All users</option>
+                                <option value="active">Users with an active plan</option>
+                                <option value="expired">Users whose plan has expired</option>
+                                <option value="no_plan">Users who never had a plan</option>
+                            </select>
+                            <small class="field-hint" id="announceAudienceCount"></small>
+                        </label>
+
+                        <div class="notify-preview">
+                            <small>Preview in the app</small>
+                            <div class="preview-item" id="announcePreview"></div>
+                        </div>
+
+                        <p class="form-error" id="announceError" hidden></p>
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary" id="announceSubmit"><span class="spinner"></span><svg class="icon"><use href="#i-send"/></svg><span>Send announcement</span></button>
+                        </div>
+                    </form>
+
+                    <div class="panel notify-history">
+                        <div class="panel-head">
+                            <h2>Sent announcements</h2>
+                            <small class="muted" id="announceSentCount"></small>
+                        </div>
+                        <div id="announcementsList"></div>
+                    </div>
+                </div>
+            </section>
+
             <!-- Settings -->
             <section class="view" data-view="settings" hidden>
                 <form class="panel settings-form" id="settingsForm">
@@ -214,6 +273,13 @@
                         <label class="field"><span>GCash account name</span><input type="text" id="setPayName" placeholder="e.g. JUAN D."></label>
                         <label class="field"><span>GCash number</span><input type="tel" id="setPayNumber" placeholder="09XX XXX XXXX"></label>
                     </div>
+                    <h2>Bank transfer <em class="muted small">leave blank to offer GCash only</em></h2>
+                    <div class="grid-2">
+                        <label class="field"><span>Bank</span><input type="text" id="setBankName" placeholder="e.g. BDO"></label>
+                        <label class="field"><span>Account name</span><input type="text" id="setBankAccountName" placeholder="e.g. JUAN DELA CRUZ"></label>
+                    </div>
+                    <label class="field"><span>Account number</span><input type="text" id="setBankAccountNumber" inputmode="numeric" placeholder="e.g. 0012 3456 7890"></label>
+
                     <label class="field"><span>Extra instructions <em>optional</em></span><textarea id="setPayInstructions" rows="3" placeholder="e.g. Put your email in the GCash message."></textarea></label>
 
                     <div class="form-actions">

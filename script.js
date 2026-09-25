@@ -195,6 +195,9 @@ function saveWelcomeSetup() {
     updateAllBalances();
     updateDashboard();
     showNotification('Your inventory is ready!', 'success');
+
+    // First sign-in on this device: show how the app works (tour.js)
+    maybeStartTour();
 }
 
 function updateBusinessName() {

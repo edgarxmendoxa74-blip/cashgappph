@@ -21,12 +21,28 @@ const sb = hasConfig && window.supabase
 const DAY_MS = 86400000;
 const EXPIRING_DAYS = 7;
 const PLAN_LABELS = { monthly: 'Monthly', yearly: 'Yearly', trial: 'Trial' };
+const METHOD_LABELS = { gcash: 'GCash', bank: 'Bank Transfer' };
 const VIEW_TITLES = {
     overview: 'Overview',
     accounts: 'Accounts',
     payments: 'Payments',
     subscriptions: 'Subscriptions',
+    notifications: 'Notifications',
     settings: 'Settings'
+};
+
+// Announcement kinds use the same types as the app's bell
+const ANNOUNCE_KINDS = {
+    info: { label: 'Announcement', icon: 'megaphone' },
+    success: { label: 'Update', icon: 'check' },
+    warning: { label: 'Reminder', icon: 'clock' },
+    error: { label: 'Urgent', icon: 'alert' }
+};
+const AUDIENCE_LABELS = {
+    all: 'All users',
+    active: 'Active plan',
+    expired: 'Expired plan',
+    no_plan: 'Never had a plan'
 };
 
 const state = {
@@ -35,6 +51,10 @@ const state = {
     subscriptions: [],
     requests: [],
     settings: null,
+    announcements: [],
+    announcementReads: {},    // announcement id -> number of users who opened it
+    announcementsReady: true, // false until the announcements SQL has been run
+    announceType: 'info',
     view: 'overview',
     accountFilter: 'all',
     accountSearch: '',
@@ -313,6 +333,7 @@ async function loadAll({ quiet = false } = {}) {
         state.subscriptions = subscriptions || [];
         state.requests = requests || [];
         state.settings = settings;
+        await loadAnnouncements();
         state.loadedAt = new Date();
         renderAll();
         $('lastUpdated').textContent = `Updated ${state.loadedAt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
@@ -320,6 +341,29 @@ async function loadAll({ quiet = false } = {}) {
         if (!quiet) toast(`Could not load data: ${errorText(error)}`, 'error');
     } finally {
         setBusy(button, false);
+    }
+}
+
+// Loaded on its own so the rest of the dashboard still works before the
+// announcements table exists
+async function loadAnnouncements() {
+    try {
+        const [announcements, reads] = await Promise.all([
+            sb.from('announcements').select('*').order('created_at', { ascending: false }).limit(200).then(unwrap),
+            sb.from('notifications').select('announcement_id')
+                .not('announcement_id', 'is', null).not('read_at', 'is', null).then(unwrap)
+        ]);
+        state.announcements = announcements || [];
+        state.announcementReads = {};
+        (reads || []).forEach(r => {
+            state.announcementReads[r.announcement_id] = (state.announcementReads[r.announcement_id] || 0) + 1;
+        });
+        state.announcementsReady = true;
+    } catch (error) {
+        state.announcements = [];
+        state.announcementReads = {};
+        state.announcementsReady = !/announcement/i.test(errorText(error));
+        if (state.announcementsReady) console.warn('Could not load announcements', error);
     }
 }
 
@@ -337,6 +381,7 @@ function renderAll() {
     renderAccounts();
     renderPayments();
     renderSubscriptions();
+    renderAnnouncements();
     renderSettings();
 }
 
@@ -420,7 +465,7 @@ function renderPayments() {
             <td data-label="Customer">${personCell(profileById(r.user_id), r.full_name)}</td>
             <td data-label="Plan">${PLAN_LABELS[r.plan]}</td>
             <td data-label="Amount"><strong>${peso(r.amount)}</strong></td>
-            <td data-label="GCash Ref"><code>${esc(r.payment_reference)}</code></td>
+            <td data-label="Method · Ref">${METHOD_LABELS[r.payment_method] || 'GCash'} · <code>${esc(r.payment_reference)}</code></td>
             <td data-label="Status">${chip(r.status)}</td>
         </tr>`).join('')
         : emptyRow(6, state.paymentFilter === 'pending' ? 'No payments waiting for review.' : 'Nothing here yet.');
@@ -457,6 +502,136 @@ function renderSubscriptions() {
     }).join('') : emptyRow(6, 'No subscriptions match.');
 }
 
+// Users an announcement would reach (same rules as admin_send_announcement)
+function audienceUsers(audience) {
+    return state.profiles
+        .filter(p => p.role !== 'admin' && p.status === 'active')
+        .filter(p => {
+            if (audience === 'all') return true;
+            const { status } = accessFor(p);
+            if (audience === 'active') return status === 'active' || status === 'expiring';
+            if (audience === 'expired') return status === 'expired';
+            if (audience === 'no_plan') return status === 'none';
+            return false;
+        });
+}
+
+function renderAnnouncePreview() {
+    const kind = ANNOUNCE_KINDS[state.announceType];
+    const title = $('announceTitle').value.trim();
+    const body = $('announceBody').value.trim();
+    $('announcePreview').className = `preview-item preview-${state.announceType}`;
+    $('announcePreview').innerHTML = `
+        <span class="preview-icon">${icon(kind.icon)}</span>
+        <div>
+            <strong>${esc(title || 'Your title')}</strong>
+            ${body ? `<p>${esc(body)}</p>` : '<p class="muted">Your message</p>'}
+            <small>Just now</small>
+        </div>`;
+    $('announceBodyCount').textContent = `${$('announceBody').value.length} / 1000`;
+}
+
+function renderAudienceCount() {
+    const count = audienceUsers($('announceAudience').value).length;
+    $('announceAudienceCount').textContent = count
+        ? `Will reach ${count} user${count === 1 ? '' : 's'}.`
+        : 'No users in this group right now.';
+}
+
+function renderAnnouncements() {
+    renderAnnouncePreview();
+    renderAudienceCount();
+
+    const list = $('announcementsList');
+    if (!state.announcementsReady) {
+        $('announceSentCount').textContent = '';
+        list.innerHTML = `
+            <div class="setup-note">
+                ${icon('alert')}
+                <div><strong>One-time setup needed</strong><small>Run the "Announcements" part of <code>supabase/schema.sql</code> in the Supabase SQL Editor, then click Refresh.</small></div>
+            </div>`;
+        return;
+    }
+
+    const items = state.announcements;
+    $('announceSentCount').textContent = items.length ? `${items.length} sent` : '';
+    list.innerHTML = items.length ? items.map(a => {
+        const kind = ANNOUNCE_KINDS[a.type] || ANNOUNCE_KINDS.info;
+        const read = state.announcementReads[a.id] || 0;
+        return `
+        <article class="announce-row">
+            <span class="preview-icon preview-${esc(a.type)}">${icon(kind.icon)}</span>
+            <div class="announce-main">
+                <div class="announce-top">
+                    <strong>${esc(a.title)}</strong>
+                    <span class="kind-tag kind-tag-${esc(a.type)}">${kind.label}</span>
+                </div>
+                ${a.body ? `<p>${esc(a.body)}</p>` : ''}
+                <small>${fmtDateTime(a.created_at)} · ${AUDIENCE_LABELS[a.audience] || esc(a.audience)} · ${a.recipient_count} recipient${a.recipient_count === 1 ? '' : 's'} · ${read} read</small>
+            </div>
+            <button type="button" class="icon-btn icon-btn-danger" title="Delete for everyone" aria-label="Delete announcement" onclick="deleteAnnouncement('${a.id}')">${icon('trash')}</button>
+        </article>`;
+    }).join('') : '<p class="empty">No announcements yet. Your first one will show here.</p>';
+}
+
+function setAnnounceType(type) {
+    state.announceType = type;
+    $('announceType').querySelectorAll('.kind').forEach(b => {
+        const on = b.dataset.type === type;
+        b.classList.toggle('active', on);
+        b.setAttribute('aria-checked', on);
+    });
+    renderAnnouncePreview();
+}
+
+async function sendAnnouncement(event) {
+    event.preventDefault();
+    const title = $('announceTitle').value.trim();
+    const body = $('announceBody').value.trim();
+    const audience = $('announceAudience').value;
+    const errorEl = $('announceError');
+    const fail = message => { errorEl.textContent = message; errorEl.hidden = false; };
+
+    if (!state.announcementsReady) return fail('Run the Announcements SQL in Supabase first (see the note on the right).');
+    if (!title) return fail('Enter a title.');
+    const count = audienceUsers(audience).length;
+    if (!count) return fail('No users in this group right now.');
+    errorEl.hidden = true;
+
+    if (!confirm(`Send "${title}" to ${count} user${count === 1 ? '' : 's'} (${AUDIENCE_LABELS[audience]})?`)) return;
+
+    const button = $('announceSubmit');
+    setBusy(button, true);
+    try {
+        const sent = unwrap(await sb.rpc('admin_send_announcement', {
+            p_title: title, p_body: body, p_type: state.announceType, p_audience: audience
+        }));
+        $('announceForm').reset();
+        setAnnounceType('info');
+        renderAudienceCount();
+        toast(`Sent to ${sent.recipient_count} user${sent.recipient_count === 1 ? '' : 's'}.`);
+        await loadAnnouncements();
+        renderAnnouncements();
+    } catch (error) {
+        fail(errorText(error));
+    } finally {
+        setBusy(button, false);
+    }
+}
+
+async function deleteAnnouncement(id) {
+    const a = state.announcements.find(x => x.id === id);
+    if (!a || !confirm(`Delete "${a.title}"? It will disappear from every user's notifications.`)) return;
+    try {
+        unwrap(await sb.from('announcements').delete().eq('id', id));
+        toast('Announcement deleted.');
+        await loadAnnouncements();
+        renderAnnouncements();
+    } catch (error) {
+        toast(errorText(error), 'error');
+    }
+}
+
 function renderSettings() {
     const s = state.settings || {};
     $('setMonthly').value = s.monthly_price ?? '';
@@ -464,6 +639,9 @@ function renderSettings() {
     $('setPayName').value = s.payment_gcash_name || '';
     $('setPayNumber').value = s.payment_gcash_number || '';
     $('setPayInstructions').value = s.payment_instructions || '';
+    $('setBankName').value = s.payment_bank_name || '';
+    $('setBankAccountName').value = s.payment_bank_account_name || '';
+    $('setBankAccountNumber').value = s.payment_bank_account_number || '';
 }
 
 function showView(view) {
@@ -789,7 +967,11 @@ async function openPayment(requestId) {
                 </div>
                 <div class="kv-grid kv-grid-1">
                     <div><small>Plan</small><span>${PLAN_LABELS[r.plan]} · <strong>${peso(r.amount)}</strong></span></div>
-                    <div><small>GCash reference no.</small><span><code>${esc(r.payment_reference)}</code></span></div>
+                    <div><small>Payment method</small><span>${METHOD_LABELS[r.payment_method] || 'GCash'}</span></div>
+                    <div><small>Reference no.</small><span><code>${esc(r.payment_reference)}</code></span></div>
+                    ${r.receipt_no ? `<div><small>Receipt no.</small><span><code>${esc(r.receipt_no)}</code></span></div>` : ''}
+                    ${r.sender_name || r.sender_account ? `
+                    <div><small>Paid from</small><span>${esc([r.sender_bank, r.sender_name, r.sender_account].filter(Boolean).join(' · '))}</span></div>` : ''}
                     <div><small>Full name</small><span>${esc(r.full_name)}</span></div>
                     <div><small>Mobile</small><span>${esc(r.phone)}</span></div>
                     <div><small>Email</small><span>${esc(r.email || p?.email || '—')}</span></div>
@@ -817,13 +999,18 @@ async function openPayment(requestId) {
     }
 
     try {
-        const { data, error } = await sb.storage.from('payment-proofs').createSignedUrl(r.proof_path, 3600);
-        if (error) throw error;
+        // Receipts go to ImageKit; older requests (or no ImageKit) use the private bucket
+        let imageUrl = r.receipt_url;
+        if (!imageUrl) {
+            const { data, error } = await sb.storage.from('payment-proofs').createSignedUrl(r.proof_path, 3600);
+            if (error) throw error;
+            imageUrl = data.signedUrl;
+        }
         const box = $('proofBox');
         if (!box) return; // dialog closed meanwhile
         box.innerHTML = `
-            <a href="${esc(data.signedUrl)}" target="_blank" rel="noopener" title="Open full size">
-                <img src="${esc(data.signedUrl)}" alt="Payment proof">
+            <a href="${esc(imageUrl)}" target="_blank" rel="noopener" title="Open full size">
+                <img src="${esc(imageUrl)}" alt="Payment receipt">
                 <span class="proof-open">${icon('external')} Open full size</span>
             </a>`;
     } catch (error) {
@@ -869,6 +1056,9 @@ async function saveSettings(event) {
             payment_gcash_name: $('setPayName').value.trim(),
             payment_gcash_number: $('setPayNumber').value.trim(),
             payment_instructions: $('setPayInstructions').value.trim(),
+            payment_bank_name: $('setBankName').value.trim(),
+            payment_bank_account_name: $('setBankAccountName').value.trim(),
+            payment_bank_account_number: $('setBankAccountNumber').value.trim(),
             updated_at: new Date().toISOString()
         }).eq('id', 1));
         toast('Settings saved.');
@@ -900,6 +1090,14 @@ function wireEvents() {
     $('refreshBtn').addEventListener('click', () => loadAll());
     $('newAccountBtn').addEventListener('click', openNewAccount);
     $('settingsForm').addEventListener('submit', saveSettings);
+    $('announceForm').addEventListener('submit', sendAnnouncement);
+    $('announceTitle').addEventListener('input', renderAnnouncePreview);
+    $('announceBody').addEventListener('input', renderAnnouncePreview);
+    $('announceAudience').addEventListener('change', renderAudienceCount);
+    $('announceType').addEventListener('click', event => {
+        const button = event.target.closest('.kind');
+        if (button) setAnnounceType(button.dataset.type);
+    });
 
     $('sideNav').addEventListener('click', event => {
         const button = event.target.closest('button[data-view]');

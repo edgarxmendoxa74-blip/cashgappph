@@ -3,7 +3,7 @@
 // Bump CACHE_VERSION whenever app files change so users get the update.
 // ===================================
 
-const CACHE_VERSION = 'v11';
+const CACHE_VERSION = 'v14';
 const APP_CACHE = `cashg-app-${CACHE_VERSION}`;
 const FONT_CACHE = 'cashg-fonts';
 const LIB_CACHE = 'cashg-libs';
@@ -16,6 +16,8 @@ const APP_SHELL = [
     './config.js',
     './cloud.js',
     './account.js',
+    './tour.js',
+    './connectivity.js',
     './manifest.webmanifest',
     './icons/icon-192.png',
     './icons/icon-512.png',

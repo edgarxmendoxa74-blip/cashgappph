@@ -51,7 +51,7 @@ CashG is a mobile-first, installable inventory app for GCash Cash In / Cash Out 
 ### 🔑 Accounts & Subscriptions
 - Sign in with an account created by the admin (no public sign-up)
 - Subscription page: plan status, dates and days left
-- Monthly or Yearly plan: GCash payment form with receipt upload
+- Monthly or Yearly plan: pay by GCash or bank transfer, then generate and send a PNG receipt
 - In-app notifications (payment approved/rejected, expiry reminders)
 - Records become read-only when the subscription expires
 

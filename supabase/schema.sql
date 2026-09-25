@@ -432,8 +432,146 @@ create policy "proofs: read own or admin" on storage.objects
            and ((storage.foldername(name))[1] = auth.uid()::text or public.is_admin()));
 
 -- ---------------------------------------------------------------------
+-- Announcements (Admin → Notifications)
+--
+-- An announcement is sent as one notification row per matching user, so
+-- it shows in the app's bell like any other notification. Deleting an
+-- announcement removes it from every user's list.
+-- ---------------------------------------------------------------------
+
+create table if not exists public.announcements (
+    id              uuid primary key default gen_random_uuid(),
+    title           text not null,
+    body            text not null default '',
+    type            text not null default 'info' check (type in ('info', 'success', 'warning', 'error')),
+    audience        text not null default 'all' check (audience in ('all', 'active', 'expired', 'no_plan')),
+    recipient_count int  not null default 0,
+    created_by      uuid references public.profiles (id) on delete set null,
+    created_at      timestamptz not null default now()
+);
+
+create index if not exists announcements_created_idx
+    on public.announcements (created_at desc);
+
+alter table public.notifications
+    add column if not exists announcement_id uuid references public.announcements (id) on delete cascade;
+
+create index if not exists notifications_announcement_idx
+    on public.notifications (announcement_id) where announcement_id is not null;
+
+alter table public.announcements enable row level security;
+
+drop policy if exists "announcements: admin reads"   on public.announcements;
+drop policy if exists "announcements: admin deletes" on public.announcements;
+create policy "announcements: admin reads" on public.announcements
+    for select to authenticated using (public.is_admin());
+create policy "announcements: admin deletes" on public.announcements
+    for delete to authenticated using (public.is_admin());
+
+revoke all on public.announcements from anon;
+
+-- Send to every active user account in the chosen audience:
+--   all      everyone
+--   active   has access right now (paid or trial)
+--   expired  had a plan before, none right now
+--   no_plan  never had a plan
+create or replace function public.admin_send_announcement(
+    p_title text, p_body text default '', p_type text default 'info', p_audience text default 'all'
+)
+returns public.announcements
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+    v_row   public.announcements;
+    v_count int;
+begin
+    if not public.is_admin() then
+        raise exception 'Only admins can send announcements';
+    end if;
+    if coalesce(trim(p_title), '') = '' then
+        raise exception 'Title is required';
+    end if;
+    if p_type not in ('info', 'success', 'warning', 'error') then
+        raise exception 'Unknown type %', p_type;
+    end if;
+    if p_audience not in ('all', 'active', 'expired', 'no_plan') then
+        raise exception 'Unknown audience %', p_audience;
+    end if;
+
+    insert into public.announcements (title, body, type, audience, created_by)
+    values (left(trim(p_title), 120), left(coalesce(trim(p_body), ''), 1000), p_type, p_audience, auth.uid())
+    returning * into v_row;
+
+    insert into public.notifications (user_id, title, body, type, announcement_id)
+    select p.id, v_row.title, v_row.body, v_row.type, v_row.id
+    from public.profiles p
+    where p.role = 'user'
+      and p.status = 'active'
+      and case p_audience
+            when 'active' then exists (
+                select 1 from public.subscriptions s
+                where s.user_id = p.id and s.starts_at <= now() and s.ends_at > now())
+            when 'expired' then exists (
+                select 1 from public.subscriptions s where s.user_id = p.id)
+              and not exists (
+                select 1 from public.subscriptions s
+                where s.user_id = p.id and s.starts_at <= now() and s.ends_at > now())
+            when 'no_plan' then not exists (
+                select 1 from public.subscriptions s where s.user_id = p.id)
+            else true
+          end;
+
+    get diagnostics v_count = row_count;
+
+    update public.announcements set recipient_count = v_count
+    where id = v_row.id
+    returning * into v_row;
+
+    return v_row;
+end;
+$$;
+
+-- ---------------------------------------------------------------------
 -- Make yourself admin (run once, after creating your own login in
 -- Supabase → Authentication → Users → Add user):
 --
 --   update public.profiles set role = 'admin' where email = 'you@example.com';
 -- ---------------------------------------------------------------------
+
+-- ---------------------------------------------------------------------
+-- Payment methods & generated receipts
+--
+-- Users pay by GCash (e-wallet) or bank transfer, then generate a PNG
+-- receipt in the app. The receipt image is uploaded to ImageKit
+-- (receipt_url) or, if ImageKit isn't set up, to the payment-proofs
+-- bucket (proof_path). The screenshot upload is no longer required.
+-- ---------------------------------------------------------------------
+
+alter table public.app_settings
+    add column if not exists payment_bank_name           text not null default '',
+    add column if not exists payment_bank_account_name   text not null default '',
+    add column if not exists payment_bank_account_number text not null default '';
+
+alter table public.subscription_requests
+    add column if not exists payment_method text not null default 'gcash',
+    add column if not exists sender_name    text not null default '',
+    add column if not exists sender_account text not null default '',
+    add column if not exists sender_bank    text not null default '',
+    add column if not exists receipt_no     text,
+    add column if not exists receipt_url    text;
+
+alter table public.subscription_requests alter column proof_path drop not null;
+
+alter table public.subscription_requests drop constraint if exists subscription_requests_payment_method_check;
+alter table public.subscription_requests add constraint subscription_requests_payment_method_check
+    check (payment_method in ('gcash', 'bank'));
+
+alter table public.subscription_requests drop constraint if exists subscription_requests_has_proof;
+alter table public.subscription_requests add constraint subscription_requests_has_proof
+    check (proof_path is not null or receipt_url is not null);
+
+alter table public.subscription_requests drop constraint if exists subscription_requests_receipt_url_check;
+alter table public.subscription_requests add constraint subscription_requests_receipt_url_check
+    check (receipt_url is null or receipt_url like 'https://ik.imagekit.io/%');

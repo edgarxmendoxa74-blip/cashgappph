@@ -1022,3 +1022,173 @@ input:focus, select:focus, textarea:focus {
     .inline-form .btn { grid-column: 1 / -1; }
     .side-me { display: none; }
 }
+
+/* ---------- Notifications / announcements ---------- */
+.notify-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+    gap: 1rem;
+    align-items: start;
+}
+
+.notify-intro { margin: -0.25rem 0 1rem; }
+
+.field-hint {
+    font-size: 0.75rem;
+    color: var(--ink-3);
+}
+
+.kind-picker {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.5rem;
+}
+
+.kind {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.625rem 0.25rem;
+    border: 1.5px solid var(--line);
+    border-radius: 12px;
+    background: var(--surface);
+    color: var(--ink-2);
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+}
+
+.kind .icon { width: 20px; height: 20px; }
+.kind:hover { border-color: var(--ink-3); color: var(--ink); }
+
+.kind-info.active    { border-color: var(--brand); background: var(--brand-50); color: var(--brand-600); }
+.kind-success.active { border-color: #0e9f6e; background: #e6f6ef; color: #047857; }
+.kind-warning.active { border-color: #f59e0b; background: var(--amber-50); color: var(--amber); }
+.kind-error.active   { border-color: var(--red); background: var(--red-50); color: var(--red); }
+
+.kind:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(3, 149, 95, 0.25); }
+
+/* Mirrors the notification card users see in the app */
+.notify-preview {
+    margin: 0.25rem 0 1rem;
+    padding: 0.875rem;
+    border-radius: 14px;
+    background: var(--surface-2);
+    border: 1px dashed var(--line);
+}
+
+.notify-preview > small {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+}
+
+.preview-item {
+    display: flex;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    border-radius: 12px;
+    background: var(--surface);
+    border: 1px solid var(--line-soft);
+    box-shadow: 0 1px 2px rgba(4, 38, 61, 0.05);
+}
+
+.preview-item strong { display: block; font-size: 0.9375rem; line-height: 1.35; overflow-wrap: anywhere; }
+.preview-item p { margin-top: 0.125rem; font-size: 0.875rem; color: var(--ink-2); white-space: pre-line; overflow-wrap: anywhere; }
+.preview-item small { display: block; margin-top: 0.25rem; font-size: 0.75rem; color: var(--ink-3); }
+
+.preview-icon {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: 11px;
+    display: grid;
+    place-items: center;
+    background: var(--brand-50);
+    color: var(--brand);
+}
+
+.preview-success .preview-icon, .preview-icon.preview-success { background: #e6f6ef; color: #047857; }
+.preview-warning .preview-icon, .preview-icon.preview-warning { background: var(--amber-50); color: var(--amber); }
+.preview-error .preview-icon,   .preview-icon.preview-error   { background: var(--red-50); color: var(--red); }
+
+/* Sent list */
+.announce-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.875rem 0;
+}
+
+.announce-row + .announce-row { border-top: 1px solid var(--line-soft); }
+
+.announce-main { flex: 1; min-width: 0; }
+
+.announce-top {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.announce-top strong { font-size: 0.9375rem; overflow-wrap: anywhere; }
+
+.announce-main p {
+    margin-top: 0.125rem;
+    font-size: 0.875rem;
+    color: var(--ink-2);
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.announce-main small {
+    display: block;
+    margin-top: 0.375rem;
+    font-size: 0.75rem;
+    color: var(--ink-3);
+}
+
+.kind-tag {
+    padding: 0.125rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    background: var(--brand-50);
+    color: var(--brand-600);
+}
+
+.kind-tag-success { background: #e6f6ef; color: #047857; }
+.kind-tag-warning { background: var(--amber-50); color: var(--amber); }
+.kind-tag-error   { background: var(--red-50); color: var(--red); }
+
+.icon-btn-danger:hover { background: var(--red-50); color: var(--red); }
+
+.setup-note {
+    display: flex;
+    gap: 0.75rem;
+    padding: 0.875rem;
+    border-radius: 12px;
+    background: var(--amber-50);
+    color: var(--amber);
+}
+
+.setup-note strong { display: block; color: var(--ink); font-size: 0.875rem; }
+.setup-note small { display: block; color: var(--ink-2); font-size: 0.8125rem; margin-top: 0.125rem; }
+
+@media (max-width: 1100px) {
+    .notify-layout { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 520px) {
+    .kind-picker { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
