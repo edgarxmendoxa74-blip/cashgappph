@@ -70,33 +70,49 @@
         <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></symbol>
         <symbol id="i-user" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
         <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></symbol>
+        <symbol id="i-eye-off" viewBox="0 0 24 24"><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.53 13.53 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><path d="m2 2 20 20"/></symbol>
+        <symbol id="i-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></symbol>
     </svg>
 
     <!-- Sign-in screen (accounts are created by the admin) -->
     <div class="auth-screen" id="authScreen" hidden>
-        <div class="auth-panel">
-            <div class="auth-brand">
-                <img src="icons/logo.png" alt="CashG Inventory" class="auth-logo">
+        <section class="auth-hero">
+            <div class="auth-hero-inner">
+                <div class="auth-logo-tile">
+                    <img src="icons/logo.png" alt="CashG Inventory" class="auth-logo">
+                </div>
+                <h2 class="auth-hero-title">Your GCash business, organized.</h2>
+                <p class="auth-hero-text">Track cash in, cash out, fees and balances in one place, even offline.</p>
+                <ul class="auth-features">
+                    <li><span><svg class="icon"><use href="#i-wallet"/></svg></span>Live cash and GCash balances</li>
+                    <li><span><svg class="icon"><use href="#i-chart"/></svg></span>Daily reports and profit tracking</li>
+                    <li><span><svg class="icon"><use href="#i-users"/></svg></span>Customer list for faster transactions</li>
+                </ul>
             </div>
+        </section>
 
+        <section class="auth-main">
             <form class="auth-card" id="loginForm" novalidate>
-                <h1>Welcome back</h1>
-                <p class="auth-sub">Sign in with the account your admin gave you.</p>
+                <div class="auth-card-head">
+                    <h1>Sign in</h1>
+                    <p class="auth-sub">Welcome back! Use the account your admin gave you.</p>
+                </div>
 
                 <div class="form-group">
-                    <label for="loginEmail">Email</label>
+                    <label for="loginEmail">Email address</label>
                     <div class="input-with-icon">
                         <svg class="icon"><use href="#i-mail"/></svg>
-                        <input type="email" id="loginEmail" autocomplete="username" inputmode="email" placeholder="you@example.com" required>
+                        <input type="email" id="loginEmail" autocomplete="username" inputmode="email" autocapitalize="off" spellcheck="false" placeholder="you@example.com" required>
                     </div>
                 </div>
                 <div class="form-group">
                     <label for="loginPassword">Password</label>
                     <div class="input-with-icon">
                         <svg class="icon"><use href="#i-lock"/></svg>
-                        <input type="password" id="loginPassword" autocomplete="current-password" placeholder="Your password" required>
+                        <input type="password" id="loginPassword" autocomplete="current-password" placeholder="Enter your password" required>
                         <button type="button" class="input-action" id="loginPasswordToggle" aria-label="Show password">
-                            <svg class="icon"><use href="#i-eye"/></svg>
+                            <svg class="icon icon-eye"><use href="#i-eye"/></svg>
+                            <svg class="icon icon-eye-off"><use href="#i-eye-off"/></svg>
                         </button>
                     </div>
                 </div>
@@ -106,19 +122,27 @@
                 <button type="submit" class="btn btn-primary btn-block auth-submit" id="loginSubmit">
                     <span class="btn-spinner" aria-hidden="true"></span>
                     <span>Sign In</span>
+                    <svg class="icon auth-submit-arrow"><use href="#i-arrow-right"/></svg>
                 </button>
 
-                <p class="auth-note">
-                    <svg class="icon"><use href="#i-shield"/></svg>
-                    No sign-up needed. Your account is created by the CashG admin. Forgot your password? Contact your admin.
-                </p>
+                <div class="auth-help">
+                    <span class="auth-help-icon"><svg class="icon"><use href="#i-shield"/></svg></span>
+                    <div>
+                        <strong>No account or forgot your password?</strong>
+                        <span>Accounts are created by your CashG admin. Contact them for access or a password reset.</span>
+                    </div>
+                </div>
             </form>
 
             <div class="auth-card auth-setup" id="authSetupNotice" hidden>
-                <h1>Almost ready</h1>
-                <p class="auth-sub">This copy of CashG isn't connected to a server yet. Add your Supabase URL and anon key to <code>config.js</code> (see <code>SETUP.md</code>).</p>
+                <div class="auth-card-head">
+                    <h1>Almost ready</h1>
+                    <p class="auth-sub">This copy of CashG isn't connected to a server yet. Add your Supabase URL and publishable key to <code>config.js</code> (see <code>SETUP.md</code>).</p>
+                </div>
             </div>
-        </div>
+
+            <p class="auth-footer">CashG Inventory App · Secure sign-in</p>
+        </section>
     </div>
     <!-- Sidebar Navigation -->
     <nav class="sidebar">
