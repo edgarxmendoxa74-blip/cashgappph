@@ -1,0 +1,17 @@
+{
+  "name": "cashg-mobile",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Android build of the CashG app (Capacitor)",
+  "scripts": {
+    "sync-web": "bash sync-web.sh"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/cli": "^8.5.2",
+    "@capacitor/core": "^8.5.2"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5"
+  }
+}

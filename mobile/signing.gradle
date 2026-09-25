@@ -1,0 +1,27 @@
+// Appended to android/app/build.gradle by the GitHub Actions workflow.
+// Signs release builds with the CashG key from the environment and sets the
+// version from the workflow run, so each APK installs as an update.
+
+def runNumber = (System.getenv("GITHUB_RUN_NUMBER") ?: "1").toInteger()
+
+android {
+    defaultConfig {
+        versionCode runNumber
+        versionName "1.0.${runNumber}"
+    }
+
+    signingConfigs {
+        cashg {
+            storeFile file(System.getenv("CASHG_KEYSTORE_PATH") ?: "missing.jks")
+            storePassword System.getenv("CASHG_KEYSTORE_PASSWORD")
+            keyAlias System.getenv("CASHG_KEY_ALIAS") ?: "cashg"
+            keyPassword System.getenv("CASHG_KEYSTORE_PASSWORD")
+        }
+    }
+
+    buildTypes {
+        release {
+            signingConfig signingConfigs.cashg
+        }
+    }
+}

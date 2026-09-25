@@ -1,0 +1,8 @@
+{
+  "appId": "com.cashg.inventory",
+  "appName": "CashG",
+  "webDir": "www",
+  "android": {
+    "backgroundColor": "#f2f6f4"
+  }
+}

@@ -1,0 +1,94 @@
+name: Android APK
+
+# Builds the CashG Android app (Capacitor) on every push to main.
+# Download the APK from the run's "Artifacts" section.
+#
+# Signed builds need these repository secrets (Settings → Secrets and variables → Actions):
+#   CASHG_KEYSTORE_BASE64    the release keystore (.jks), base64-encoded
+#   CASHG_KEYSTORE_PASSWORD  its password
+# Without them a debug APK is built instead (fine for testing, but it can't
+# update an installed signed app).
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'admin/**'
+      - 'supabase/**'
+      - '**.md'
+  workflow_dispatch:
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: mobile
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      - name: Install Capacitor
+        run: npm ci
+
+      - name: Copy web app
+        run: bash sync-web.sh
+
+      - name: Create Android project
+        run: |
+          npx cap add android
+          npx capacitor-assets generate --android
+          npx cap sync android
+          cat signing.gradle >> android/app/build.gradle
+
+      - name: Decode signing key
+        id: signing
+        env:
+          KEYSTORE_BASE64: ${{ secrets.CASHG_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/cashg-release.jks"
+            echo "CASHG_KEYSTORE_PATH=$RUNNER_TEMP/cashg-release.jks" >> "$GITHUB_ENV"
+            echo "signed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::CASHG_KEYSTORE_BASE64 is not set, so this is a debug build."
+            echo "signed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build APK
+        working-directory: mobile/android
+        env:
+          CASHG_KEYSTORE_PASSWORD: ${{ secrets.CASHG_KEYSTORE_PASSWORD }}
+        run: |
+          chmod +x gradlew
+          if [ "${{ steps.signing.outputs.signed }}" = "true" ]; then
+            ./gradlew assembleRelease --no-daemon
+            cp app/build/outputs/apk/release/app-release.apk "$GITHUB_WORKSPACE/CashG-v1.0.${GITHUB_RUN_NUMBER}.apk"
+          else
+            ./gradlew assembleDebug --no-daemon
+            cp app/build/outputs/apk/debug/app-debug.apk "$GITHUB_WORKSPACE/CashG-v1.0.${GITHUB_RUN_NUMBER}-debug.apk"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CashG-APK-${{ github.run_number }}
+          path: CashG-*.apk
+          if-no-files-found: error
+          retention-days: 90

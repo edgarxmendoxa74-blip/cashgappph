@@ -1,0 +1,4 @@
+# Generated during the build
+www/
+android/
+node_modules/
