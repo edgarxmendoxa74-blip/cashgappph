@@ -2,93 +2,194 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GCash Inventory Management System</title>
-    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#03955f">
+    <meta name="description" content="CashG Inventory App — track Cash In / Cash Out, customers and balances. Works offline.">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="CashG">
+    <meta name="application-name" content="CashG">
+    <title>CashG Inventory App</title>
+    <link rel="icon" type="image/png" href="icons/favicon-64.png">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
-    <link href="fontawesome.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        /* Fallback icon system - removes dependency on CDN */
-        .fas::before { font-family: Arial, sans-serif; font-weight: bold; }
-        .fa-tachometer-alt::before { content: "📊"; margin-right: 8px; }
-        .fa-exchange-alt::before { content: "🔄"; margin-right: 8px; }
-        .fa-users::before { content: "👥"; margin-right: 8px; }
-        .fa-warehouse::before { content: "🏭"; margin-right: 8px; }
-        .fa-chart-line::before { content: "📈"; margin-right: 8px; }
-        .fa-cog::before { content: "⚙️"; margin-right: 8px; }
-        .fa-user-circle::before { content: "👤"; margin-right: 8px; }
-        .fa-bars::before { content: "☰"; }
-        .fa-mobile-alt::before { content: "📱"; margin-right: 8px; }
-        .fa-wallet::before { content: "💰"; margin-right: 8px; }
-        .fa-arrow-down::before { content: "⬇️"; margin-right: 8px; }
-        .fa-arrow-up::before { content: "⬆️"; margin-right: 8px; }
-        .fa-plus::before { content: "+"; margin-right: 8px; font-weight: bold; }
-        .fa-minus::before { content: "−"; margin-right: 8px; font-weight: bold; }
-        .fa-user-plus::before { content: "👤+"; margin-right: 8px; }
-        .fa-file-alt::before { content: "📄"; margin-right: 8px; }
-        .fa-check-circle::before { content: "✓"; margin-right: 8px; }
-        .fa-exclamation-circle::before { content: "⚠️"; margin-right: 8px; }
-        .fa-exclamation-triangle::before { content: "⚠️"; margin-right: 8px; }
-        .fa-info-circle::before { content: "ℹ️"; margin-right: 8px; }
-    </style>
 </head>
-<body>
+<body data-page="dashboard">
+    <!-- Icon sprite (Lucide icons, ISC license) -->
+    <svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+        <symbol id="i-home" viewBox="0 0 24 24"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></symbol>
+        <symbol id="i-transfer" viewBox="0 0 24 24"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/></symbol>
+        <symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+        <symbol id="i-wallet" viewBox="0 0 24 24"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></symbol>
+        <symbol id="i-chart" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></symbol>
+        <symbol id="i-settings" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></symbol>
+        <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/></symbol>
+        <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+        <symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></symbol>
+        <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+        <symbol id="i-in" viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></symbol>
+        <symbol id="i-out" viewBox="0 0 24 24"><path d="M12 15V3"/><path d="m7 8 5-5 5 5"/><path d="M5 21h14"/></symbol>
+        <symbol id="i-trending" viewBox="0 0 24 24"><path d="m22 7-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/></symbol>
+        <symbol id="i-user-plus" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6"/><path d="M22 11h-6"/></symbol>
+        <symbol id="i-file" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></symbol>
+        <symbol id="i-cash" viewBox="0 0 24 24"><rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></symbol>
+        <symbol id="i-phone-device" viewBox="0 0 24 24"><rect width="14" height="20" x="5" y="2" rx="2"/><path d="M12 18h.01"/></symbol>
+        <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></symbol>
+        <symbol id="i-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></symbol>
+        <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></symbol>
+        <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></symbol>
+        <symbol id="i-phone" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></symbol>
+        <symbol id="i-mail" viewBox="0 0 24 24"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></symbol>
+        <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
+        <symbol id="i-check" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></symbol>
+        <symbol id="i-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></symbol>
+        <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></symbol>
+        <symbol id="i-clipboard" viewBox="0 0 24 24"><rect width="8" height="4" x="8" y="2" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></symbol>
+        <symbol id="i-store" viewBox="0 0 24 24"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"/><path d="M2 7h20"/><path d="M22 7v3a2 2 0 0 1-2 2 2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 16 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 12 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 8 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 4 12a2 2 0 0 1-2-2V7"/></symbol>
+        <symbol id="i-database" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></symbol>
+        <symbol id="i-coins" viewBox="0 0 24 24"><circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1 1 10.34 18"/><path d="M7 6h1v4"/><path d="m16.71 13.88.7.71-2.82 2.82"/></symbol>
+        <symbol id="i-save" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></symbol>
+        <symbol id="i-repeat" viewBox="0 0 24 24"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></symbol>
+        <symbol id="i-receipt" viewBox="0 0 24 24"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 0 0 4H8"/><path d="M12 17.5v-11"/></symbol>
+        <symbol id="i-award" viewBox="0 0 24 24"><circle cx="12" cy="8" r="6"/><path d="M15.48 12.89 17 22l-5-3-5 3 1.52-9.11"/></symbol>
+        <symbol id="i-activity" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></symbol>
+        <symbol id="i-calendar" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></symbol>
+        <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+        <symbol id="i-install" viewBox="0 0 24 24"><rect width="14" height="20" x="5" y="2" rx="2"/><path d="M12 7v7"/><path d="m9 11 3 3 3-3"/></symbol>
+        <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol>
+        <symbol id="i-crown" viewBox="0 0 24 24"><path d="m2 4 3 12h14l3-12-6 7-4-7-4 7-6-7z"/><path d="M5 20h14"/></symbol>
+        <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
+        <symbol id="i-logout" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></symbol>
+        <symbol id="i-lock" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+        <symbol id="i-image" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.09-3.09a2 2 0 0 0-2.82 0L6 21"/></symbol>
+        <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></symbol>
+        <symbol id="i-user" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+        <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></symbol>
+    </svg>
+
+    <!-- Sign-in screen (accounts are created by the admin) -->
+    <div class="auth-screen" id="authScreen" hidden>
+        <div class="auth-panel">
+            <div class="auth-brand">
+                <img src="icons/logo.png" alt="CashG Inventory" class="auth-logo">
+            </div>
+
+            <form class="auth-card" id="loginForm" novalidate>
+                <h1>Welcome back</h1>
+                <p class="auth-sub">Sign in with the account your admin gave you.</p>
+
+                <div class="form-group">
+                    <label for="loginEmail">Email</label>
+                    <div class="input-with-icon">
+                        <svg class="icon"><use href="#i-mail"/></svg>
+                        <input type="email" id="loginEmail" autocomplete="username" inputmode="email" placeholder="you@example.com" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">Password</label>
+                    <div class="input-with-icon">
+                        <svg class="icon"><use href="#i-lock"/></svg>
+                        <input type="password" id="loginPassword" autocomplete="current-password" placeholder="Your password" required>
+                        <button type="button" class="input-action" id="loginPasswordToggle" aria-label="Show password">
+                            <svg class="icon"><use href="#i-eye"/></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <p class="auth-error" id="loginError" role="alert" hidden></p>
+
+                <button type="submit" class="btn btn-primary btn-block auth-submit" id="loginSubmit">
+                    <span class="btn-spinner" aria-hidden="true"></span>
+                    <span>Sign In</span>
+                </button>
+
+                <p class="auth-note">
+                    <svg class="icon"><use href="#i-shield"/></svg>
+                    No sign-up needed. Your account is created by the CashG admin. Forgot your password? Contact your admin.
+                </p>
+            </form>
+
+            <div class="auth-card auth-setup" id="authSetupNotice" hidden>
+                <h1>Almost ready</h1>
+                <p class="auth-sub">This copy of CashG isn't connected to a server yet. Add your Supabase URL and anon key to <code>config.js</code> (see <code>SETUP.md</code>).</p>
+            </div>
+        </div>
+    </div>
     <!-- Sidebar Navigation -->
     <nav class="sidebar">
         <div class="sidebar-header">
-            <div class="logo">
-                <img src="gcash-logo.svg" alt="GCash" class="logo-image">
-                <span>Inventory</span>
+            <div class="brand">
+                <img class="brand-mark" src="icons/logo-mark.png" alt="CashG logo">
+                <div class="brand-text">
+                    <span class="brand-name">Cash<span>G</span></span>
+                    <span class="brand-tagline">Inventory App</span>
+                </div>
             </div>
-            <button class="sidebar-toggle" id="sidebarToggle">
-                <i class="fas fa-bars"></i>
+            <button class="sidebar-toggle" id="sidebarToggle" aria-label="Close menu">
+                <svg class="icon"><use href="#i-x"/></svg>
             </button>
         </div>
-        
+
         <ul class="sidebar-menu">
             <li class="menu-item active">
                 <a href="#dashboard" data-page="dashboard">
-                    <i class="fas fa-tachometer-alt"></i>
-                    <span>Dashboard</span>
+                    <svg class="icon"><use href="#i-home"/></svg>
+                    <span>Inventory</span>
                 </a>
             </li>
             <li class="menu-item">
                 <a href="#transactions" data-page="transactions">
-                    <i class="fas fa-exchange-alt"></i>
+                    <svg class="icon"><use href="#i-transfer"/></svg>
                     <span>Transactions</span>
                 </a>
             </li>
             <li class="menu-item">
                 <a href="#customers" data-page="customers">
-                    <i class="fas fa-users"></i>
+                    <svg class="icon"><use href="#i-users"/></svg>
                     <span>Customers</span>
                 </a>
             </li>
             <li class="menu-item">
                 <a href="#inventory" data-page="inventory">
-                    <i class="fas fa-warehouse"></i>
-                    <span>Inventory</span>
+                    <svg class="icon"><use href="#i-wallet"/></svg>
+                    <span>Balances</span>
                 </a>
             </li>
             <li class="menu-item">
                 <a href="#reports" data-page="reports">
-                    <i class="fas fa-chart-line"></i>
+                    <svg class="icon"><use href="#i-chart"/></svg>
                     <span>Reports</span>
                 </a>
             </li>
             <li class="menu-item">
+                <a href="#subscription" data-page="subscription">
+                    <svg class="icon"><use href="#i-crown"/></svg>
+                    <span>Subscription</span>
+                </a>
+            </li>
+            <li class="menu-item">
                 <a href="#settings" data-page="settings">
-                    <i class="fas fa-cog"></i>
+                    <svg class="icon"><use href="#i-settings"/></svg>
                     <span>Settings</span>
                 </a>
             </li>
         </ul>
-        
+
         <div class="sidebar-footer">
             <div class="user-info">
-                <i class="fas fa-user-circle"></i>
-                <span>Admin User</span>
+                <span class="user-avatar"><svg class="icon"><use href="#i-store"/></svg></span>
+                <div class="user-text">
+                    <span id="sidebarBusinessName">My Business</span>
+                    <small id="sidebarAccountSub">Not signed in</small>
+                </div>
+                <button type="button" class="user-signout" onclick="signOutAccount()" aria-label="Sign out" title="Sign out">
+                    <svg class="icon"><use href="#i-logout"/></svg>
+                </button>
             </div>
         </div>
     </nav>
@@ -97,112 +198,132 @@
     <main class="main-content">
         <header class="top-header">
             <div class="header-left">
-                <h1 id="pageTitle">Dashboard</h1>
+                <h1 id="pageTitle">Inventory</h1>
                 <p class="current-date" id="currentDate"></p>
             </div>
             <div class="header-right">
                 <div class="quick-stats">
-                    <div class="stat-item">
-                        <i class="fas fa-wallet"></i>
-                        <span>Cash: ₱<span id="cashOnHand">0</span></span>
+                    <div class="stat-item stat-cash">
+                        <span class="stat-item-icon"><svg class="icon"><use href="#i-cash"/></svg></span>
+                        <span class="stat-item-text"><small>Cash</small><span class="stat-item-value">₱<span id="cashOnHand">0</span></span></span>
                     </div>
-                    <div class="stat-item">
-                        <i class="fas fa-mobile-alt"></i>
-                        <span>GCash: ₱<span id="gcashBalance">0</span></span>
+                    <div class="stat-item stat-gcash">
+                        <span class="stat-item-icon"><svg class="icon"><use href="#i-phone-device"/></svg></span>
+                        <span class="stat-item-text"><small>GCash</small><span class="stat-item-value">₱<span id="gcashBalance">0</span></span></span>
                     </div>
                 </div>
             </div>
+            <div class="header-actions">
+                <button type="button" class="header-bell" id="notifBell" onclick="openNotifications()" aria-label="Notifications">
+                    <svg class="icon"><use href="#i-bell"/></svg>
+                    <span class="bell-badge" id="notifBadge" hidden>0</span>
+                </button>
+            </div>
         </header>
+
+        <!-- Subscription status banner (filled by account.js) -->
+        <div class="sub-banner" id="subBanner" role="status" hidden></div>
 
         <!-- Dashboard Page -->
         <div class="page-content" id="dashboard-page">
             <div class="dashboard-grid">
-                <!-- Summary Cards -->
-                <div class="summary-cards">
-                    <div class="summary-card cash-in">
-                        <div class="card-icon">
-                            <i class="fas fa-arrow-down"></i>
+                <!-- Balance Hero -->
+                <section class="balance-hero">
+                    <div class="balance-hero-top">
+                        <span class="balance-hero-label">Total Balance</span>
+                        <button class="balance-hero-link" onclick="navigateToPage('inventory')">
+                            Manage <svg class="icon"><use href="#i-chevron"/></svg>
+                        </button>
+                    </div>
+                    <div class="balance-hero-amount">₱<span id="heroTotal">0</span></div>
+                    <div class="balance-hero-split">
+                        <div>
+                            <span class="balance-hero-sublabel"><svg class="icon"><use href="#i-cash"/></svg> Cash on Hand</span>
+                            <strong>₱<span id="heroCash">0</span></strong>
                         </div>
-                        <div class="card-content">
-                            <h3>Today's Cash In</h3>
+                        <div>
+                            <span class="balance-hero-sublabel"><svg class="icon"><use href="#i-phone-device"/></svg> GCash Wallet</span>
+                            <strong>₱<span id="heroGcash">0</span></strong>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Quick Actions -->
+                <section class="quick-actions">
+                    <div class="action-buttons">
+                        <button class="action-btn cash-in-btn" onclick="openTransactionModal('cashin')">
+                            <span class="action-icon"><svg class="icon"><use href="#i-in"/></svg></span>
+                            <span>Cash In</span>
+                        </button>
+                        <button class="action-btn cash-out-btn" onclick="openTransactionModal('cashout')">
+                            <span class="action-icon"><svg class="icon"><use href="#i-out"/></svg></span>
+                            <span>Cash Out</span>
+                        </button>
+                        <button class="action-btn customer-btn" onclick="openCustomerModal()">
+                            <span class="action-icon"><svg class="icon"><use href="#i-user-plus"/></svg></span>
+                            <span>Customer</span>
+                        </button>
+                        <button class="action-btn report-btn" onclick="generateDailyReport()">
+                            <span class="action-icon"><svg class="icon"><use href="#i-chart"/></svg></span>
+                            <span>Report</span>
+                        </button>
+                    </div>
+                </section>
+
+                <!-- Today's Summary -->
+                <section>
+                    <h3 class="section-title">Today</h3>
+                    <div class="summary-cards">
+                        <div class="summary-card cash-in">
+                            <div class="card-head">
+                                <span class="card-icon"><svg class="icon"><use href="#i-in"/></svg></span>
+                                <h3>Cash In</h3>
+                            </div>
                             <div class="amount">₱<span id="todayCashIn">0</span></div>
                             <div class="count"><span id="todayCashInCount">0</span> transactions</div>
                         </div>
-                    </div>
-                    
-                    <div class="summary-card cash-out">
-                        <div class="card-icon">
-                            <i class="fas fa-arrow-up"></i>
-                        </div>
-                        <div class="card-content">
-                            <h3>Today's Cash Out</h3>
+
+                        <div class="summary-card cash-out">
+                            <div class="card-head">
+                                <span class="card-icon"><svg class="icon"><use href="#i-out"/></svg></span>
+                                <h3>Cash Out</h3>
+                            </div>
                             <div class="amount">₱<span id="todayCashOut">0</span></div>
                             <div class="count"><span id="todayCashOutCount">0</span> transactions</div>
                         </div>
-                    </div>
-                    
-                    <div class="summary-card profit">
-                        <div class="card-icon">
-                            <i class="fas fa-chart-line"></i>
-                        </div>
-                        <div class="card-content">
-                            <h3>Today's Profit</h3>
+
+                        <div class="summary-card profit">
+                            <div class="card-head">
+                                <span class="card-icon"><svg class="icon"><use href="#i-trending"/></svg></span>
+                                <h3>Profit</h3>
+                            </div>
                             <div class="amount">₱<span id="todayProfit">0</span></div>
                             <div class="count">From fees collected</div>
                         </div>
-                    </div>
-                    
-                    <div class="summary-card customers">
-                        <div class="card-icon">
-                            <i class="fas fa-users"></i>
-                        </div>
-                        <div class="card-content">
-                            <h3>Active Customers</h3>
-                            <div class="amount"><span id="activeCustomers">0</span></div>
-                            <div class="count">This month</div>
-                        </div>
-                    </div>
-                </div>
 
-                <!-- Quick Actions -->
-                <div class="quick-actions">
-                    <h3>Quick Actions</h3>
-                    <div class="action-buttons">
-                        <button class="action-btn cash-in-btn" onclick="openTransactionModal('cashin')">
-                            <i class="fas fa-plus"></i>
-                            <span>New Cash In</span>
-                        </button>
-                        <button class="action-btn cash-out-btn" onclick="openTransactionModal('cashout')">
-                            <i class="fas fa-minus"></i>
-                            <span>New Cash Out</span>
-                        </button>
-                        <button class="action-btn customer-btn" onclick="openCustomerModal()">
-                            <i class="fas fa-user-plus"></i>
-                            <span>Add Customer</span>
-                        </button>
-                        <button class="action-btn report-btn" onclick="generateDailyReport()">
-                            <i class="fas fa-file-alt"></i>
-                            <span>Daily Report</span>
-                        </button>
+                        <div class="summary-card customers">
+                            <div class="card-head">
+                                <span class="card-icon"><svg class="icon"><use href="#i-users"/></svg></span>
+                                <h3>Customers</h3>
+                            </div>
+                            <div class="amount"><span id="activeCustomers">0</span></div>
+                            <div class="count">Active this month</div>
+                        </div>
                     </div>
-                </div>
+                </section>
 
                 <!-- Recent Transactions -->
-                <div class="recent-transactions">
+                <section class="recent-transactions">
                     <div class="section-header">
                         <h3>Recent Transactions</h3>
-                        <button class="view-all-btn" onclick="navigateToPage('transactions')">View All</button>
+                        <button class="view-all-btn" onclick="navigateToPage('transactions')">
+                            View All <svg class="icon"><use href="#i-chevron"/></svg>
+                        </button>
                     </div>
                     <div class="transactions-list" id="recentTransactionsList">
                         <!-- Transactions will be populated by JavaScript -->
                     </div>
-                </div>
-
-                <!-- Balance Overview Chart -->
-                <div class="balance-chart">
-                    <h3>Balance Overview</h3>
-                    <canvas id="balanceChart" width="400" height="200"></canvas>
-                </div>
+                </section>
             </div>
         </div>
 
@@ -210,23 +331,24 @@
         <div class="page-content" id="transactions-page" style="display: none;">
             <div class="page-header">
                 <div class="header-left">
-                    <h2>Transaction Management</h2>
+                    <h2>Transactions</h2>
+                    <p class="page-subtitle">All your Cash In and Cash Out records</p>
                 </div>
                 <div class="header-right">
                     <div class="filter-controls">
-                        <select id="transactionFilter">
-                            <option value="all">All Transactions</option>
-                            <option value="cashin">Cash In Only</option>
-                            <option value="cashout">Cash Out Only</option>
+                        <select id="transactionFilter" aria-label="Filter by type">
+                            <option value="all">All types</option>
+                            <option value="cashin">Cash In</option>
+                            <option value="cashout">Cash Out</option>
                         </select>
-                        <input type="date" id="dateFilter" />
+                        <input type="date" id="dateFilter" aria-label="Filter by date" />
                         <button class="btn btn-primary" onclick="openTransactionModal()">
-                            <i class="fas fa-plus"></i> New Transaction
+                            <svg class="icon"><use href="#i-plus"/></svg> New Transaction
                         </button>
                     </div>
                 </div>
             </div>
-            
+
             <div class="data-table-container">
                 <table class="data-table" id="transactionsTable">
                     <thead>
@@ -252,60 +374,103 @@
         <div class="page-content" id="customers-page" style="display: none;">
             <div class="page-header">
                 <div class="header-left">
-                    <h2>Customer Management</h2>
+                    <h2>Customers</h2>
+                    <p class="page-subtitle"><span id="customerCount">0</span> saved customers</p>
                 </div>
                 <div class="header-right">
                     <div class="search-controls">
-                        <input type="text" id="customerSearch" placeholder="Search customers..." />
+                        <label class="search-field">
+                            <svg class="icon"><use href="#i-search"/></svg>
+                            <input type="text" id="customerSearch" placeholder="Search name, number, notes..." aria-label="Search customers" />
+                        </label>
                         <button class="btn btn-primary" onclick="openCustomerModal()">
-                            <i class="fas fa-user-plus"></i> Add Customer
+                            <svg class="icon"><use href="#i-user-plus"/></svg> Add Customer
                         </button>
                     </div>
                 </div>
             </div>
-            
-            <div class="customers-grid" id="customersGrid">
-                <!-- Customer cards will be populated by JavaScript -->
+
+            <div class="data-table-container">
+                <table class="data-table excel-table" id="customersTable">
+                    <thead>
+                        <tr>
+                            <th onclick="sortCustomers('id')" style="cursor: pointer; user-select: none;">
+                                # <span class="sort-indicator">⇅</span>
+                            </th>
+                            <th onclick="sortCustomers('name')" style="cursor: pointer; user-select: none;">
+                                Name <span class="sort-indicator">⇅</span>
+                            </th>
+                            <th onclick="sortCustomers('phone')" style="cursor: pointer; user-select: none;">
+                                Phone Number <span class="sort-indicator">⇅</span>
+                            </th>
+                            <th onclick="sortCustomers('gcash')" style="cursor: pointer; user-select: none;">
+                                GCash Number <span class="sort-indicator">⇅</span>
+                            </th>
+                            <th>Notes</th>
+                            <th style="text-align: center;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="customersTableBody">
+                        <!-- Customers will be populated by JavaScript -->
+                    </tbody>
+                </table>
             </div>
         </div>
 
         <!-- Inventory Page -->
         <div class="page-content" id="inventory-page" style="display: none;">
             <div class="page-header">
-                <h2>Inventory Management</h2>
+                <div class="header-left">
+                    <h2>Balances</h2>
+                    <p class="page-subtitle">Your cash and GCash float</p>
+                </div>
             </div>
-            
+
             <div class="inventory-grid">
-                <div class="inventory-card">
-                    <h3>Cash on Hand</h3>
+                <div class="inventory-card inventory-cash">
+                    <div class="inventory-card-head">
+                        <span class="inventory-icon"><svg class="icon"><use href="#i-cash"/></svg></span>
+                        <h3>Cash on Hand</h3>
+                    </div>
                     <div class="balance-amount">₱<span id="cashBalance">0</span></div>
                     <div class="balance-actions">
-                        <button class="btn btn-success" onclick="adjustBalance('cash', 'add')">Add Cash</button>
-                        <button class="btn btn-danger" onclick="adjustBalance('cash', 'subtract')">Remove Cash</button>
+                        <button class="btn btn-soft-success" onclick="adjustBalance('cash', 'add')">
+                            <svg class="icon"><use href="#i-plus"/></svg> Add
+                        </button>
+                        <button class="btn btn-soft-danger" onclick="adjustBalance('cash', 'subtract')">
+                            <svg class="icon"><use href="#i-minus"/></svg> Remove
+                        </button>
                     </div>
                 </div>
-                
-                <div class="inventory-card">
-                    <h3>GCash Wallet Balance</h3>
+
+                <div class="inventory-card inventory-gcash">
+                    <div class="inventory-card-head">
+                        <span class="inventory-icon"><svg class="icon"><use href="#i-phone-device"/></svg></span>
+                        <h3>GCash Wallet</h3>
+                    </div>
                     <div class="balance-amount">₱<span id="walletBalance">0</span></div>
                     <div class="balance-actions">
-                        <button class="btn btn-success" onclick="adjustBalance('gcash', 'add')">Add Balance</button>
-                        <button class="btn btn-danger" onclick="adjustBalance('gcash', 'subtract')">Remove Balance</button>
+                        <button class="btn btn-soft-success" onclick="adjustBalance('gcash', 'add')">
+                            <svg class="icon"><use href="#i-plus"/></svg> Add
+                        </button>
+                        <button class="btn btn-soft-danger" onclick="adjustBalance('gcash', 'subtract')">
+                            <svg class="icon"><use href="#i-minus"/></svg> Remove
+                        </button>
                     </div>
                 </div>
-                
+
                 <div class="inventory-summary">
-                    <h3>Inventory Summary</h3>
+                    <h3>Summary</h3>
                     <div class="summary-item">
-                        <span>Total Assets:</span>
+                        <span>Total Assets</span>
                         <span>₱<span id="totalAssets">0</span></span>
                     </div>
                     <div class="summary-item">
-                        <span>Available for Cash Out:</span>
+                        <span>Available for Cash Out</span>
                         <span>₱<span id="availableCashOut">0</span></span>
                     </div>
                     <div class="summary-item">
-                        <span>Available for Cash In:</span>
+                        <span>Available for Cash In</span>
                         <span>₱<span id="availableCashIn">0</span></span>
                     </div>
                 </div>
@@ -315,103 +480,435 @@
         <!-- Reports Page -->
         <div class="page-content" id="reports-page" style="display: none;">
             <div class="page-header">
-                <h2>Reports & Analytics</h2>
-                <div class="date-range-picker">
-                    <input type="date" id="reportStartDate" />
-                    <span>to</span>
-                    <input type="date" id="reportEndDate" />
-                    <button class="btn btn-primary" onclick="generateReport()">Generate Report</button>
+                <div class="header-left">
+                    <h2>Reports</h2>
+                    <p class="page-subtitle">Business insights for any date range</p>
                 </div>
             </div>
-            
+
+            <!-- Date Range Selector -->
+            <div class="report-controls">
+                <div class="report-controls-head">
+                    <div class="report-controls-title">
+                        <span class="report-controls-icon"><svg class="icon"><use href="#i-calendar"/></svg></span>
+                        <div>
+                            <h3>Date Range</h3>
+                            <p>Pick a quick range or set your own dates</p>
+                        </div>
+                    </div>
+                    <div class="segmented range-tabs" role="group" aria-label="Quick date range">
+                        <button type="button" class="segmented-option" data-range="today" onclick="setReportRange('today')">Today</button>
+                        <button type="button" class="segmented-option" data-range="week" onclick="setReportRange('week')">This Week</button>
+                        <button type="button" class="segmented-option active" data-range="month" onclick="setReportRange('month')">This Month</button>
+                    </div>
+                </div>
+                <div class="report-controls-body">
+                    <div class="date-field">
+                        <label for="reportStartDate">From</label>
+                        <input type="date" id="reportStartDate" onchange="clearRangeChips()" />
+                    </div>
+                    <span class="date-arrow" aria-hidden="true"><svg class="icon"><use href="#i-chevron"/></svg></span>
+                    <div class="date-field">
+                        <label for="reportEndDate">To</label>
+                        <input type="date" id="reportEndDate" onchange="clearRangeChips()" />
+                    </div>
+                    <button class="btn btn-primary report-generate-btn" onclick="generateReport()">
+                        <svg class="icon"><use href="#i-chart"/></svg> Generate Report
+                    </button>
+                </div>
+            </div>
+
+            <!-- Summary Stats Row -->
+            <div class="report-stats-grid">
+                <div class="stat-card stat-revenue">
+                    <div class="stat-icon"><svg class="icon"><use href="#i-coins"/></svg></div>
+                    <div class="stat-content">
+                        <div class="stat-label">Total Volume</div>
+                        <div class="stat-value" id="reportTotalRevenue">₱0</div>
+                        <div class="stat-change" id="reportRevenueChange"></div>
+                    </div>
+                </div>
+
+                <div class="stat-card stat-transactions">
+                    <div class="stat-icon"><svg class="icon"><use href="#i-repeat"/></svg></div>
+                    <div class="stat-content">
+                        <div class="stat-label">Transactions</div>
+                        <div class="stat-value" id="reportTotalTransactions">0</div>
+                        <div class="stat-change" id="reportTransactionChange"></div>
+                    </div>
+                </div>
+
+                <div class="stat-card stat-profit">
+                    <div class="stat-icon"><svg class="icon"><use href="#i-trending"/></svg></div>
+                    <div class="stat-content">
+                        <div class="stat-label">Net Profit</div>
+                        <div class="stat-value" id="reportNetProfit">₱0</div>
+                        <div class="stat-change" id="reportProfitChange"></div>
+                    </div>
+                </div>
+
+                <div class="stat-card stat-avg">
+                    <div class="stat-icon"><svg class="icon"><use href="#i-receipt"/></svg></div>
+                    <div class="stat-content">
+                        <div class="stat-label">Avg Transaction</div>
+                        <div class="stat-value" id="reportAvgTransaction">₱0</div>
+                        <div class="stat-change" id="reportAvgChange"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Reports Grid -->
             <div class="reports-grid">
+                <!-- Transaction Summary Card -->
                 <div class="report-card">
-                    <h3>Transaction Summary</h3>
-                    <div id="transactionSummary">
-                        <!-- Report content will be populated by JavaScript -->
+                    <div class="report-card-header">
+                        <h3><svg class="icon"><use href="#i-transfer"/></svg> Transaction Summary</h3>
+                        <button class="btn btn-secondary btn-sm" onclick="exportTransactionReport()">
+                            <svg class="icon"><use href="#i-download"/></svg> Export
+                        </button>
+                    </div>
+                    <div id="transactionSummary" class="report-content">
+                        <!-- Will be populated by JavaScript -->
                     </div>
                 </div>
-                
+
+                <!-- Cash Flow Card -->
                 <div class="report-card">
-                    <h3>Profit Analysis</h3>
-                    <canvas id="profitChart" width="400" height="200"></canvas>
-                </div>
-                
-                <div class="report-card">
-                    <h3>Customer Activity</h3>
-                    <div id="customerActivity">
-                        <!-- Report content will be populated by JavaScript -->
+                    <div class="report-card-header">
+                        <h3><svg class="icon"><use href="#i-activity"/></svg> Cash Flow</h3>
+                        <button class="btn btn-secondary btn-sm" onclick="exportCashFlowReport()">
+                            <svg class="icon"><use href="#i-download"/></svg> Export
+                        </button>
+                    </div>
+                    <div id="cashFlowSummary" class="report-content">
+                        <!-- Will be populated by JavaScript -->
                     </div>
                 </div>
+
+                <!-- Top Customers Card -->
+                <div class="report-card">
+                    <div class="report-card-header">
+                        <h3><svg class="icon"><use href="#i-award"/></svg> Top Customers</h3>
+                        <button class="btn btn-secondary btn-sm" onclick="exportCustomerReport()">
+                            <svg class="icon"><use href="#i-download"/></svg> Export
+                        </button>
+                    </div>
+                    <div id="topCustomers" class="report-content">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Fee Revenue Card -->
+                <div class="report-card">
+                    <div class="report-card-header">
+                        <h3><svg class="icon"><use href="#i-coins"/></svg> Fee Breakdown</h3>
+                    </div>
+                    <div id="feeBreakdown" class="report-content">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Transaction Timeline Card (Full Width) -->
+                <div class="report-card report-card-full">
+                    <div class="report-card-header">
+                        <h3><svg class="icon"><use href="#i-calendar"/></svg> Daily Timeline</h3>
+                    </div>
+                    <div id="transactionTimeline" class="report-content">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Subscription Page -->
+        <div class="page-content" id="subscription-page" style="display: none;">
+            <div class="page-header">
+                <div class="header-left">
+                    <h2>Subscription</h2>
+                    <p class="page-subtitle">Your plan, renewals and payment history</p>
+                </div>
+            </div>
+
+            <div class="sub-layout">
+                <div class="sub-main">
+                    <!-- Status (filled by account.js) -->
+                    <section class="sub-status-card" id="subStatusCard"></section>
+
+                    <!-- Payment waiting for admin review -->
+                    <section class="sub-pending-card" id="subPendingCard" hidden></section>
+
+                    <!-- Plan choice + payment form -->
+                    <section class="sub-plan-section" id="subPlanSection">
+                        <h3 class="section-title">Choose a plan</h3>
+                        <div class="plan-options" id="planOptions"></div>
+
+                        <form class="sub-form" id="subForm" hidden novalidate>
+                            <div class="pay-box">
+                                <div class="pay-box-head">
+                                    <span class="pay-box-icon"><svg class="icon"><use href="#i-phone-device"/></svg></span>
+                                    <div>
+                                        <small>Step 1 · Send via GCash</small>
+                                        <strong id="subPayAmount">₱0</strong>
+                                    </div>
+                                </div>
+                                <div class="pay-box-rows">
+                                    <div><span>Account name</span><strong id="subPayName">—</strong></div>
+                                    <div><span>GCash number</span><strong id="subPayNumber">—</strong></div>
+                                </div>
+                                <p class="pay-box-note" id="subPayInstructions" hidden></p>
+                            </div>
+
+                            <h4 class="sub-form-step">Step 2 · Your details</h4>
+                            <div class="form-group">
+                                <label for="subFullName">Full Name</label>
+                                <input type="text" id="subFullName" name="fullName" autocomplete="name" required>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="subPhone">Mobile Number</label>
+                                    <input type="tel" id="subPhone" name="phone" autocomplete="tel" placeholder="09XX XXX XXXX" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="subBusiness">Business Name</label>
+                                    <input type="text" id="subBusiness" name="businessName" autocomplete="organization">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="subAddress">Address <span class="optional">optional</span></label>
+                                <input type="text" id="subAddress" name="address" autocomplete="street-address" placeholder="Barangay, City / Municipality">
+                            </div>
+
+                            <h4 class="sub-form-step">Step 3 · Payment proof</h4>
+                            <div class="form-group">
+                                <label for="subReference">GCash Reference No.</label>
+                                <input type="text" id="subReference" name="reference" inputmode="numeric" placeholder="13-digit reference number" required>
+                            </div>
+                            <label class="proof-drop" id="subProofDrop" for="subProofInput">
+                                <input type="file" id="subProofInput" accept="image/*">
+                                <span class="proof-drop-icon"><svg class="icon"><use href="#i-image"/></svg></span>
+                                <span class="proof-drop-text">
+                                    <strong>Upload receipt screenshot</strong>
+                                    <small>JPG or PNG, up to 5 MB</small>
+                                </span>
+                            </label>
+                            <div class="proof-preview" id="subProofPreview" hidden>
+                                <img alt="Payment proof preview">
+                                <span></span>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary btn-block" id="subSubmit">
+                                <span class="btn-spinner" aria-hidden="true"></span>
+                                <span id="subSubmitLabel">Submit Payment</span>
+                            </button>
+                            <p class="sub-form-note">The admin will check your payment and activate your plan. You'll get a notification here.</p>
+                        </form>
+                    </section>
+                </div>
+
+                <aside class="sub-side">
+                    <section class="settings-card">
+                        <h3 class="section-title">Payment history</h3>
+                        <div class="sub-history" id="subHistory"></div>
+                    </section>
+
+                    <section class="settings-card account-card">
+                        <div class="account-card-row">
+                            <span class="user-avatar"><svg class="icon"><use href="#i-user"/></svg></span>
+                            <div class="account-card-text">
+                                <small>Signed in as</small>
+                                <strong data-account-email></strong>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-secondary btn-block" onclick="signOutAccount()">
+                            <svg class="icon"><use href="#i-logout"/></svg> Sign Out
+                        </button>
+                    </section>
+                </aside>
             </div>
         </div>
 
         <!-- Settings Page -->
         <div class="page-content" id="settings-page" style="display: none;">
             <div class="page-header">
-                <h2>Settings</h2>
+                <div class="header-left">
+                    <h2>Settings</h2>
+                    <p class="page-subtitle">Fees, business details and your data</p>
+                </div>
             </div>
-            
+
             <div class="settings-grid">
+                <!-- Fee Structure Card -->
                 <div class="settings-card">
-                    <h3>Fee Structure</h3>
+                    <div class="settings-card-header">
+                        <div class="settings-icon icon-tone-green">
+                            <svg class="icon"><use href="#i-coins"/></svg>
+                        </div>
+                        <div>
+                            <h3>Fee Structure</h3>
+                            <p>Fees charged per amount tier</p>
+                        </div>
+                    </div>
+
                     <div class="fee-settings">
-                        <div class="fee-item">
-                            <label>Cash In Fee (₱50-1000):</label>
-                            <input type="number" id="cashInFee1" value="5" min="0" step="1">
+                        <div class="fee-section">
+                            <h4><span class="fee-dot fee-dot-in"></span> Cash In Fees</h4>
+                            <div class="fee-item">
+                                <div class="fee-label">
+                                    <label for="cashInFee1">Tier 1</label>
+                                    <span class="fee-description">₱50 – ₱1,000</span>
+                                </div>
+                                <div class="fee-input-wrapper">
+                                    <span class="currency-symbol">₱</span>
+                                    <input type="number" id="cashInFee1" value="5" min="0" step="1" inputmode="decimal">
+                                </div>
+                            </div>
+                            <div class="fee-item">
+                                <div class="fee-label">
+                                    <label for="cashInFee2">Tier 2</label>
+                                    <span class="fee-description">₱1,001 – ₱3,000</span>
+                                </div>
+                                <div class="fee-input-wrapper">
+                                    <span class="currency-symbol">₱</span>
+                                    <input type="number" id="cashInFee2" value="10" min="0" step="1" inputmode="decimal">
+                                </div>
+                            </div>
+                            <div class="fee-item">
+                                <div class="fee-label">
+                                    <label for="cashInFee3">Tier 3</label>
+                                    <span class="fee-description">₱3,001 and up</span>
+                                </div>
+                                <div class="fee-input-wrapper">
+                                    <span class="currency-symbol">₱</span>
+                                    <input type="number" id="cashInFee3" value="15" min="0" step="1" inputmode="decimal">
+                                </div>
+                            </div>
                         </div>
-                        <div class="fee-item">
-                            <label>Cash In Fee (₱1001-3000):</label>
-                            <input type="number" id="cashInFee2" value="10" min="0" step="1">
-                        </div>
-                        <div class="fee-item">
-                            <label>Cash In Fee (₱3001+):</label>
-                            <input type="number" id="cashInFee3" value="15" min="0" step="1">
-                        </div>
-                        <div class="fee-item">
-                            <label>Cash Out Fee (₱100-1000):</label>
-                            <input type="number" id="cashOutFee1" value="10" min="0" step="1">
-                        </div>
-                        <div class="fee-item">
-                            <label>Cash Out Fee (₱1001-3000):</label>
-                            <input type="number" id="cashOutFee2" value="15" min="0" step="1">
-                        </div>
-                        <div class="fee-item">
-                            <label>Cash Out Fee (₱3001+):</label>
-                            <input type="number" id="cashOutFee3" value="20" min="0" step="1">
+
+                        <div class="fee-section">
+                            <h4><span class="fee-dot fee-dot-out"></span> Cash Out Fees</h4>
+                            <div class="fee-item">
+                                <div class="fee-label">
+                                    <label for="cashOutFee1">Tier 1</label>
+                                    <span class="fee-description">₱100 – ₱1,000</span>
+                                </div>
+                                <div class="fee-input-wrapper">
+                                    <span class="currency-symbol">₱</span>
+                                    <input type="number" id="cashOutFee1" value="10" min="0" step="1" inputmode="decimal">
+                                </div>
+                            </div>
+                            <div class="fee-item">
+                                <div class="fee-label">
+                                    <label for="cashOutFee2">Tier 2</label>
+                                    <span class="fee-description">₱1,001 – ₱3,000</span>
+                                </div>
+                                <div class="fee-input-wrapper">
+                                    <span class="currency-symbol">₱</span>
+                                    <input type="number" id="cashOutFee2" value="15" min="0" step="1" inputmode="decimal">
+                                </div>
+                            </div>
+                            <div class="fee-item">
+                                <div class="fee-label">
+                                    <label for="cashOutFee3">Tier 3</label>
+                                    <span class="fee-description">₱3,001 and up</span>
+                                </div>
+                                <div class="fee-input-wrapper">
+                                    <span class="currency-symbol">₱</span>
+                                    <input type="number" id="cashOutFee3" value="20" min="0" step="1" inputmode="decimal">
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <button class="btn btn-primary" onclick="saveFeeSettings()">Save Fee Settings</button>
+                    <button class="btn btn-primary btn-block" onclick="saveFeeSettings()">
+                        <svg class="icon"><use href="#i-save"/></svg> Save Fee Settings
+                    </button>
                 </div>
-                
+
+                <!-- Business Information Card -->
                 <div class="settings-card">
-                    <h3>Data Management</h3>
-                    <div class="data-actions">
-                        <button class="btn btn-success" onclick="exportData()">Export Data</button>
-                        <button class="btn btn-warning" onclick="importData()">Import Data</button>
-                        <button class="btn btn-danger" onclick="clearAllData()">Clear All Data</button>
+                    <div class="settings-card-header">
+                        <div class="settings-icon icon-tone-blue">
+                            <svg class="icon"><use href="#i-store"/></svg>
+                        </div>
+                        <div>
+                            <h3>Business Information</h3>
+                            <p>Shown in the app menu</p>
+                        </div>
                     </div>
-                </div>
-                
-                <div class="settings-card">
-                    <h3>Business Information</h3>
                     <div class="business-info">
                         <div class="info-item">
-                            <label>Business Name:</label>
-                            <input type="text" id="businessName" value="GCash Inventory">
+                            <label for="businessName">Business Name</label>
+                            <input type="text" id="businessName" placeholder="Enter business name" autocomplete="organization">
                         </div>
                         <div class="info-item">
-                            <label>Contact Number:</label>
-                            <input type="tel" id="businessPhone" value="+63 912 345 6789">
+                            <label for="businessPhone">Contact Number</label>
+                            <input type="tel" id="businessPhone" placeholder="+63 9XX XXX XXXX">
                         </div>
                         <div class="info-item">
-                            <label>GCash Business Number:</label>
-                            <input type="tel" id="gcashNumber" value="09123456789">
+                            <label for="gcashNumber">GCash Business Number</label>
+                            <input type="tel" id="gcashNumber" placeholder="09XX XXX XXXX">
                         </div>
                     </div>
-                    <button class="btn btn-primary" onclick="saveBusinessInfo()">Save Business Info</button>
+                    <button class="btn btn-primary btn-block" onclick="saveBusinessInfo()">
+                        <svg class="icon"><use href="#i-save"/></svg> Save Business Info
+                    </button>
+                </div>
+
+                <!-- Data Management Card -->
+                <div class="settings-card">
+                    <div class="settings-card-header">
+                        <div class="settings-icon icon-tone-purple">
+                            <svg class="icon"><use href="#i-database"/></svg>
+                        </div>
+                        <div>
+                            <h3>App &amp; Data</h3>
+                            <p>Install the app and back up your records</p>
+                        </div>
+                    </div>
+                    <div class="data-actions">
+                        <button class="data-action-btn install-app-btn" onclick="installApp()" hidden>
+                            <span class="data-action-icon icon-tone-blue"><svg class="icon"><use href="#i-install"/></svg></span>
+                            <span class="btn-content">
+                                <span class="btn-title">Install CashG App</span>
+                                <span class="btn-subtitle">Add to home screen, works offline</span>
+                            </span>
+                            <svg class="icon data-action-chevron"><use href="#i-chevron"/></svg>
+                        </button>
+                        <button class="data-action-btn" onclick="exportData()">
+                            <span class="data-action-icon icon-tone-green"><svg class="icon"><use href="#i-download"/></svg></span>
+                            <span class="btn-content">
+                                <span class="btn-title">Export Backup</span>
+                                <span class="btn-subtitle">Download your data as a file</span>
+                            </span>
+                            <svg class="icon data-action-chevron"><use href="#i-chevron"/></svg>
+                        </button>
+                        <button class="data-action-btn" onclick="importData()">
+                            <span class="data-action-icon icon-tone-purple"><svg class="icon"><use href="#i-upload"/></svg></span>
+                            <span class="btn-content">
+                                <span class="btn-title">Restore Backup</span>
+                                <span class="btn-subtitle">Import from a backup file</span>
+                            </span>
+                            <svg class="icon data-action-chevron"><use href="#i-chevron"/></svg>
+                        </button>
+                        <button class="data-action-btn data-action-danger" onclick="clearAllData()">
+                            <span class="data-action-icon icon-tone-red"><svg class="icon"><use href="#i-trash"/></svg></span>
+                            <span class="btn-content">
+                                <span class="btn-title">Clear All Data</span>
+                                <span class="btn-subtitle">Delete everything on this device</span>
+                            </span>
+                            <svg class="icon data-action-chevron"><use href="#i-chevron"/></svg>
+                        </button>
+                        <button class="data-action-btn" onclick="signOutAccount()">
+                            <span class="data-action-icon icon-tone-green"><svg class="icon"><use href="#i-logout"/></svg></span>
+                            <span class="btn-content">
+                                <span class="btn-title">Sign Out</span>
+                                <span class="btn-subtitle" data-account-email></span>
+                            </span>
+                            <svg class="icon data-action-chevron"><use href="#i-chevron"/></svg>
+                        </button>
+                    </div>
                 </div>
             </div>
+            <p class="app-footer-note">CashG Inventory App · Your inventory records stay on this device</p>
         </div>
     </main>
 
@@ -420,50 +917,63 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h3 id="transactionModalTitle">New Transaction</h3>
-                <button class="modal-close" onclick="closeModal('transactionModal')">&times;</button>
+                <button class="modal-close" onclick="closeModal('transactionModal')" aria-label="Close">
+                    <svg class="icon"><use href="#i-x"/></svg>
+                </button>
             </div>
             <div class="modal-body">
                 <form id="transactionForm">
                     <div class="form-group">
                         <label>Transaction Type</label>
-                        <select id="transactionType" onchange="updateTransactionForm()" required>
-                            <option value="">Select Type</option>
+                        <div class="type-toggle" role="radiogroup" aria-label="Transaction type">
+                            <button type="button" class="type-option type-in" data-type="cashin" role="radio" aria-checked="false" onclick="setTransactionType('cashin')">
+                                <span class="type-option-icon"><svg class="icon"><use href="#i-in"/></svg></span>
+                                <span class="type-option-text"><strong>Cash In</strong><small>Customer loads GCash</small></span>
+                            </button>
+                            <button type="button" class="type-option type-out" data-type="cashout" role="radio" aria-checked="false" onclick="setTransactionType('cashout')">
+                                <span class="type-option-icon"><svg class="icon"><use href="#i-out"/></svg></span>
+                                <span class="type-option-text"><strong>Cash Out</strong><small>Customer gets cash</small></span>
+                            </button>
+                        </div>
+                        <select id="transactionType" class="visually-hidden" tabindex="-1" aria-hidden="true" onchange="updateTransactionForm()" required>
+                            <option value="">Select type</option>
                             <option value="cashin">Cash In</option>
                             <option value="cashout">Cash Out</option>
                         </select>
                     </div>
-                    
+
                     <div class="form-group">
-                        <label>Customer</label>
+                        <label for="customerSelect">Customer</label>
                         <select id="customerSelect" required>
-                            <option value="">Select Customer</option>
+                            <option value="">Select customer</option>
                             <!-- Populated by JavaScript -->
                         </select>
                     </div>
-                    
+
                     <div class="form-group">
-                        <label>Amount (₱)</label>
-                        <input type="number" id="transactionAmount" min="50" max="8000" step="1" oninput="calculateFee()" required>
+                        <label for="transactionAmount">Amount (₱)</label>
+                        <input type="number" id="transactionAmount" min="50" max="8000" step="1" inputmode="decimal" placeholder="0" oninput="calculateFee()" required>
                     </div>
-                    
-                    <div class="form-group">
-                        <label>Fee (₱)</label>
-                        <input type="number" id="transactionFee" readonly>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="transactionFee">Fee (₱)</label>
+                            <input type="number" id="transactionFee" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label for="transactionTotal">Total (₱)</label>
+                            <input type="number" id="transactionTotal" readonly>
+                        </div>
                     </div>
-                    
+
                     <div class="form-group">
-                        <label>Total (₱)</label>
-                        <input type="number" id="transactionTotal" readonly>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Reference Number (Optional)</label>
+                        <label for="referenceNumber">Reference No. <span class="optional">optional</span></label>
                         <input type="text" id="referenceNumber" placeholder="GCash reference number">
                     </div>
-                    
+
                     <div class="form-group">
-                        <label>Notes</label>
-                        <textarea id="transactionNotes" rows="3" placeholder="Additional notes..."></textarea>
+                        <label for="transactionNotes">Notes <span class="optional">optional</span></label>
+                        <textarea id="transactionNotes" rows="2" placeholder="Additional notes..."></textarea>
                     </div>
                 </form>
             </div>
@@ -478,34 +988,32 @@
     <div class="modal" id="customerModal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>Add New Customer</h3>
-                <button class="modal-close" onclick="closeModal('customerModal')">&times;</button>
+                <h3 id="customerModalTitle">Add Customer</h3>
+                <button class="modal-close" onclick="closeModal('customerModal')" aria-label="Close">
+                    <svg class="icon"><use href="#i-x"/></svg>
+                </button>
             </div>
             <div class="modal-body">
                 <form id="customerForm">
                     <div class="form-group">
-                        <label>Full Name</label>
-                        <input type="text" id="customerName" required>
+                        <label for="customerName">Full Name</label>
+                        <input type="text" id="customerName" autocomplete="off" required>
                     </div>
-                    
-                    <div class="form-group">
-                        <label>Phone Number</label>
-                        <input type="tel" id="customerPhone" required>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="customerPhone">Phone Number</label>
+                            <input type="tel" id="customerPhone" placeholder="09XX XXX XXXX" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="customerGCash">GCash Number</label>
+                            <input type="tel" id="customerGCash" placeholder="09XX XXX XXXX">
+                        </div>
                     </div>
-                    
+
                     <div class="form-group">
-                        <label>GCash Number</label>
-                        <input type="tel" id="customerGCash">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Email (Optional)</label>
-                        <input type="email" id="customerEmail">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Notes</label>
-                        <textarea id="customerNotes" rows="3" placeholder="Additional information..."></textarea>
+                        <label for="customerNotes">Notes <span class="optional">optional</span></label>
+                        <textarea id="customerNotes" rows="2" placeholder="Additional information..."></textarea>
                     </div>
                 </form>
             </div>
@@ -521,18 +1029,20 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h3 id="balanceModalTitle">Adjust Balance</h3>
-                <button class="modal-close" onclick="closeModal('balanceModal')">&times;</button>
+                <button class="modal-close" onclick="closeModal('balanceModal')" aria-label="Close">
+                    <svg class="icon"><use href="#i-x"/></svg>
+                </button>
             </div>
             <div class="modal-body">
                 <form id="balanceForm">
                     <div class="form-group">
-                        <label id="balanceTypeLabel">Amount (₱)</label>
-                        <input type="number" id="balanceAmount" min="1" step="0.01" required>
+                        <label id="balanceTypeLabel" for="balanceAmount">Amount (₱)</label>
+                        <input type="number" id="balanceAmount" min="1" step="0.01" inputmode="decimal" placeholder="0" required>
                     </div>
-                    
+
                     <div class="form-group">
-                        <label>Reason</label>
-                        <textarea id="balanceReason" rows="3" placeholder="Reason for adjustment..." required></textarea>
+                        <label for="balanceReason">Reason</label>
+                        <textarea id="balanceReason" rows="2" placeholder="e.g. Loaded from bank, Deposit" required></textarea>
                     </div>
                 </form>
             </div>
@@ -543,6 +1053,84 @@
         </div>
     </div>
 
+    <!-- First-run Setup Modal -->
+    <div class="modal" id="welcomeModal">
+        <div class="modal-content">
+            <div class="modal-body welcome-body">
+                <div class="welcome-hero">
+                    <img class="welcome-mark" src="icons/logo.png" alt="CashG Inventory logo">
+                    <h3>Welcome to Cash<span>G</span></h3>
+                    <p class="welcome-text">
+                        No account needed. Your inventory stays private on this device.
+                        Set your starting balances to begin.
+                    </p>
+                </div>
+                <form id="welcomeForm" onsubmit="event.preventDefault(); saveWelcomeSetup();">
+                    <div class="form-group">
+                        <label for="welcomeBusinessName">Business / Store Name</label>
+                        <input type="text" id="welcomeBusinessName" placeholder="e.g. Aling Nena's Store" autocomplete="organization">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="welcomeCash">Cash on Hand (₱)</label>
+                            <input type="number" id="welcomeCash" min="0" step="0.01" inputmode="decimal" placeholder="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="welcomeGcash">GCash Balance (₱)</label>
+                            <input type="number" id="welcomeGcash" min="0" step="0.01" inputmode="decimal" placeholder="0">
+                        </div>
+                    </div>
+                </form>
+                <p class="welcome-hint">You can change these anytime in Balances and Settings.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="submit" form="welcomeForm" class="btn btn-primary btn-block">Get Started</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notifications -->
+    <div class="modal" id="notificationsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Notifications</h3>
+                <button class="modal-close" onclick="closeModal('notificationsModal')" aria-label="Close">
+                    <svg class="icon"><use href="#i-x"/></svg>
+                </button>
+            </div>
+            <div class="modal-body notif-list" id="notificationsList"></div>
+        </div>
+    </div>
+
+    <!-- Mobile: drawer backdrop + bottom tab bar -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <nav class="bottom-nav" id="bottomNav" aria-label="Main">
+        <a href="#dashboard" data-page="dashboard" class="bottom-nav-item active">
+            <svg class="icon"><use href="#i-home"/></svg>
+            <span class="bottom-nav-label">Inventory</span>
+        </a>
+        <a href="#transactions" data-page="transactions" class="bottom-nav-item">
+            <svg class="icon"><use href="#i-transfer"/></svg>
+            <span class="bottom-nav-label">History</span>
+        </a>
+        <button type="button" class="bottom-nav-fab" onclick="openTransactionModal()" aria-label="New transaction">
+            <svg class="icon"><use href="#i-plus"/></svg>
+        </button>
+        <a href="#customers" data-page="customers" class="bottom-nav-item">
+            <svg class="icon"><use href="#i-users"/></svg>
+            <span class="bottom-nav-label">Customers</span>
+        </a>
+        <button type="button" class="bottom-nav-item" id="bottomNavMore" data-more-pages="inventory reports subscription settings">
+            <svg class="icon"><use href="#i-menu"/></svg>
+            <span class="bottom-nav-label">More</span>
+        </button>
+    </nav>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <script src="cloud.js"></script>
     <script src="script.js"></script>
+    <script src="account.js"></script>
 </body>
 </html>
