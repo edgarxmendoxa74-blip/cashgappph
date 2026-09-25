@@ -136,7 +136,7 @@ Cloudflare Pages or GitHub Pages. No build step.
    then fill in the form: name, mobile, business, address, the account they paid
    from, and the **reference number** of the payment.
 3. They tap **Generate Receipt** to create a PNG receipt with all the details
-   (they can save it), then **Send Receipt to Admin**.
+   (they can save it), then **Send Receipt**.
 4. It shows up in **Admin → Payments** as *Pending*. Open it to see the details and
    the receipt image, check the reference number against your GCash / bank
    history, then **Approve** or **Reject** (with an optional note).
