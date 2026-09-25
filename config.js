@@ -19,5 +19,5 @@
 window.CASHG_CONFIG = {
     supabaseUrl: 'https://htvemsqubwxqoeakfjbs.supabase.co',
     supabaseAnonKey: 'sb_publishable_QHBV2N6hdCXzktwa-ShbwA_QJxmVaq0',
-    imagekitPublicKey: ''
+    imagekitPublicKey: 'public_ImTOdjmgkIshDSiRSN3PCAEFffE='
 };
