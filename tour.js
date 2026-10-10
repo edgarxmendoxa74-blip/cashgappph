@@ -9,7 +9,7 @@
 const TOUR_DONE_PREFIX = 'cashg-tour-done:';
 const TOUR_MOBILE_QUERY = '(max-width: 768px)';
 
-// `target` can differ between phone (bottom tab bar) and desktop (sidebar).
+// `target` can differ between phone (bottom tab bar) and desktop.
 // Steps whose target isn't visible are skipped automatically.
 const TOUR_STEPS = [
     {
@@ -18,52 +18,39 @@ const TOUR_STEPS = [
         text: 'Let\'s take a quick tour so you know where everything is. It only takes a minute.'
     },
     {
-        target: '.balance-hero',
-        title: 'Your total balance',
-        text: 'Cash on hand plus your GCash wallet. It updates by itself every time you record a transaction. Tap <b>Manage</b> to add or remove float.'
+        target: '.tt-hero',
+        title: 'Your revenue',
+        text: 'The fees you collected. It follows the filter below: <b>All</b>, <b>Today</b>, <b>This month</b> or a day you pick.'
     },
     {
-        target: '.quick-actions',
-        title: 'Quick actions',
-        text: '<b>Cash In</b> and <b>Cash Out</b> record a transaction. The fee is computed for you. You can also add a customer or open today\'s report here.'
+        target: '.tt-pair',
+        title: 'Cash and non-cash',
+        text: '<b>Cash</b> is what is in your drawer. <b>Non-cash</b> adds up your GCash, Maya and Bank balances. Both update after every transaction.'
     },
     {
-        target: '.summary-cards',
-        title: 'Today at a glance',
-        text: 'Today\'s cash in, cash out, profit from fees, and active customers.'
+        target: '.tt-fab',
+        title: 'The + button',
+        text: 'Tap <b>+</b> to record a <b>New Transaction</b>. The same menu has <b>Reports</b>, your <b>Subscription</b> and <b>Settings</b>.'
     },
     {
-        target: { mobile: '.bottom-nav-fab', desktop: '.quick-actions .cash-in-btn' },
-        title: 'Record a transaction',
-        text: 'Tap <b>+</b> anytime to add a Cash In or Cash Out. Pick the customer, type the amount, and save.',
-        desktopText: 'Click <b>Cash In</b> or <b>Cash Out</b> to add a transaction. Pick the customer, type the amount, and save.'
+        target: '.tt-tab[data-page="rates"]',
+        title: 'Rates',
+        text: 'Set your fee for each amount range, for Cash In and Cash Out. The fee is filled in for you when you add a transaction.'
     },
     {
-        target: { mobile: '.bottom-nav a[data-page="transactions"]', desktop: '.sidebar-menu a[data-page="transactions"]' },
-        title: 'Transaction history',
-        text: 'See every transaction, filter by type or date, and delete mistakes.'
+        target: '.tt-tab[data-page="inventory"]',
+        title: 'Finance',
+        text: 'See every account balance and add or remove money, such as when you load your GCash or deposit cash.'
     },
     {
-        target: { mobile: '.bottom-nav a[data-page="customers"]', desktop: '.sidebar-menu a[data-page="customers"]' },
-        title: 'Customers',
-        text: 'Save your regular customers so you can pick them quickly. Walk-in customers work too.'
-    },
-    {
-        target: { mobile: '#bottomNavMore', desktop: '.sidebar-menu a[data-page="reports"]' },
-        title: 'More tools',
-        text: '<b>Balances</b>, <b>Reports</b>, <b>Subscription</b> and <b>Settings</b> are in the More menu.',
-        desktopText: '<b>Reports</b> shows your totals for any date range. <b>Balances</b> and <b>Settings</b> (fees, backup) are in this menu too.'
+        target: '#themeToggle',
+        title: 'Dark mode',
+        text: 'Switch between light and dark anytime.'
     },
     {
         target: '#notifBell',
         title: 'Notifications',
         text: 'Payment approvals and subscription reminders show up here.'
-    },
-    {
-        target: { mobile: '#subBanner', desktop: '.sidebar-menu a[data-page="subscription"]' },
-        fallback: { mobile: '#bottomNavMore' },
-        title: 'Your subscription',
-        text: 'Choose <b>Monthly</b> or <b>Yearly</b>, send payment via GCash, and upload your receipt. The admin activates your plan and you\'ll get a notification.'
     },
     {
         icon: 'check',
@@ -206,7 +193,7 @@ function goToTourStep(index) {
     const target = step.target ? resolveTarget(step) : null;
     if (target) {
         const style = getComputedStyle(target);
-        const fixed = style.position === 'fixed' || target.closest('.bottom-nav, .top-header, .sidebar');
+        const fixed = style.position === 'fixed' || target.closest('.tt-tabs, .tt-header, .tt-fab, .sidebar');
         if (!fixed) target.scrollIntoView({ block: 'center', behavior: 'instant' });
     } else {
         window.scrollTo(0, 0);

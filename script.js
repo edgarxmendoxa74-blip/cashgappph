@@ -1,21 +1,38 @@
 // ===================================
-// GCASH INVENTORY MANAGEMENT SYSTEM
+// CASHG TRACKER
 // ===================================
 
+// Accounts the shop keeps money in. Cash is what is in the drawer; the rest are non-cash.
+const ACCOUNTS = [
+    { id: 'cash', label: 'Cash', digital: false },
+    { id: 'gcash', label: 'GCash', digital: true },
+    { id: 'maya', label: 'Maya', digital: true },
+    { id: 'bank', label: 'Bank', digital: true }
+];
+const DIGITAL_ACCOUNTS = ACCOUNTS.filter(a => a.digital);
+
+function accountLabel(id) {
+    return ACCOUNTS.find(a => a.id === id)?.label || '—';
+}
+
+function defaultRates() {
+    return [
+        { id: 1, min: 1, max: 1000, cashIn: 5, cashOut: 10 },
+        { id: 2, min: 1001, max: 3000, cashIn: 10, cashOut: 15 },
+        { id: 3, min: 3001, max: null, cashIn: 15, cashOut: 20 }
+    ];
+}
+
 // Data Storage
-// Each device keeps its own inventory in localStorage — no account needed.
+// Each device keeps its own inventory in localStorage.
 function createEmptyInventory() {
     return {
-        cash: 0,
-        gcash: 0,
+        accounts: { cash: 0, gcash: 0, maya: 0, bank: 0 },
         transactions: [],
-        customers: [],
+        finance: [],
         settings: {
-            cashInFees: { tier1: 5, tier2: 10, tier3: 15 },
-            cashOutFees: { tier1: 10, tier2: 15, tier3: 20 },
-            businessName: '',
-            businessPhone: '',
-            gcashNumber: ''
+            rates: defaultRates(),
+            businessName: ''
         }
     };
 }
@@ -24,23 +41,80 @@ function createEmptyInventory() {
 function normalizeInventory(data) {
     const base = createEmptyInventory();
     const settings = (data && data.settings) || {};
+
+    // Older saves kept only cash and gcash at the top level
+    const accounts = {};
+    ACCOUNTS.forEach(a => {
+        accounts[a.id] = round2(Number(data?.accounts?.[a.id] ?? data?.[a.id]) || 0);
+    });
+
+    // Older saves had three fixed fee tiers instead of a list of rates
+    let rates;
+    if (Array.isArray(settings.rates)) {
+        rates = settings.rates
+            .filter(r => r && Number.isFinite(Number(r.min)))
+            .map((r, i) => ({
+                id: r.id ?? i + 1,
+                min: Number(r.min),
+                max: r.max === null || r.max === undefined || r.max === '' ? null : Number(r.max),
+                cashIn: Number(r.cashIn) || 0,
+                cashOut: Number(r.cashOut) || 0
+            }));
+    } else if (settings.cashInFees || settings.cashOutFees) {
+        const ci = settings.cashInFees || {};
+        const co = settings.cashOutFees || {};
+        rates = [
+            { id: 1, min: 1, max: 1000, cashIn: Number(ci.tier1) || 0, cashOut: Number(co.tier1) || 0 },
+            { id: 2, min: 1001, max: 3000, cashIn: Number(ci.tier2) || 0, cashOut: Number(co.tier2) || 0 },
+            { id: 3, min: 3001, max: null, cashIn: Number(ci.tier3) || 0, cashOut: Number(co.tier3) || 0 }
+        ];
+    } else {
+        rates = base.settings.rates;
+    }
+
+    const allTransactions = Array.isArray(data?.transactions) ? data.transactions : [];
+    const transactions = allTransactions
+        .filter(t => t && t.type !== 'adjustment')
+        .map(t => (t.type === 'cashin' || t.type === 'cashout') && !t.account ? { ...t, account: 'gcash' } : t);
+
+    // Finance ledger. Older balance adjustments become Add / Withdraw entries
+    // (they never recorded which account, so they are display-only).
+    const finance = (Array.isArray(data?.finance) ? data.finance : []).filter(f => f && FINANCE_KINDS[f.kind]);
+    allTransactions.filter(t => t && t.type === 'adjustment').forEach(t => {
+        finance.push({
+            id: t.id,
+            date: t.date,
+            kind: t.total >= 0 ? 'add' : 'withdraw',
+            account: t.account || null,
+            amount: Math.abs(Number(t.total) || Number(t.amount) || 0),
+            note: t.notes || '',
+            legacy: !t.account
+        });
+    });
+
     return {
-        ...base,
-        ...data,
-        cash: Number(data?.cash) || 0,
-        gcash: Number(data?.gcash) || 0,
-        transactions: Array.isArray(data?.transactions) ? data.transactions : [],
-        customers: Array.isArray(data?.customers) ? data.customers : [],
+        accounts,
+        transactions,
+        finance,
         settings: {
-            ...base.settings,
-            ...settings,
-            cashInFees: { ...base.settings.cashInFees, ...settings.cashInFees },
-            cashOutFees: { ...base.settings.cashOutFees, ...settings.cashOutFees }
+            businessName: settings.businessName || '',
+            rates
         }
     };
 }
 
+const FINANCE_KINDS = {
+    add: { label: 'Add', cls: 'is-add' },
+    withdraw: { label: 'Withdraw', cls: 'is-withdraw' },
+    send: { label: 'Send', cls: 'is-send' },
+    receive: { label: 'Receive', cls: 'is-receive' }
+};
+
 let inventory = createEmptyInventory();
+
+function digitalTotal() {
+    return round2(DIGITAL_ACCOUNTS.reduce((sum, a) => sum + inventory.accounts[a.id], 0));
+}
 
 // SVG icon from the sprite in index.html
 function icon(name, className = '') {
@@ -54,8 +128,24 @@ function escapeHtml(value) {
     }[ch]));
 }
 
+// Round to centavos so repeated additions never drift (0.1 + 0.2)
+function round2(value) {
+    return Math.round((Number(value) + Number.EPSILON) * 100) / 100;
+}
+
+// Unique id even when two records are saved in the same millisecond
+function newRecordId() {
+    return Date.now() * 1000 + Math.floor(Math.random() * 1000);
+}
+
 function peso(value) {
     return '₱' + Number(value || 0).toLocaleString();
+}
+
+// ₱1,234.50: always two decimals, used for balances and totals
+function pesoFull(value) {
+    const n = Number(value || 0);
+    return (n < 0 ? '-₱' : '₱') + Math.abs(n).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 // YYYY-MM-DD in the device's local time (toISOString would give the UTC date)
@@ -64,32 +154,67 @@ function localDateString(date) {
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
-// Display names for pages (internal ids stay the same)
-const PAGE_TITLES = {
-    dashboard: 'Inventory',
-    inventory: 'Balances',
-    subscription: 'Subscription'
-};
+// ===================================
+// THEME
+// ===================================
+
+function applyTheme(theme) {
+    document.documentElement.dataset.theme = theme;
+    const dark = theme === 'dark';
+    const label = document.getElementById('themeLabel');
+    const use = document.querySelector('#themeIcon use');
+    if (label) label.textContent = dark ? 'Light' : 'Dark';
+    if (use) use.setAttribute('href', dark ? '#i-sun' : '#i-moon');
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#0d1424' : '#03955f');
+}
+
+function toggleTheme() {
+    const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+    try { localStorage.setItem('cashg-theme', next); } catch { /* private mode */ }
+    applyTheme(next);
+}
 
 // Current State
+const TAB_PAGES = ['dashboard', 'rates', 'inventory'];
 let currentPage = 'dashboard';
+let navigatingBack = false;
+
+// Android/browser back button: close an open sheet first, then step back through pages
+window.addEventListener('popstate', event => {
+    const openModal = document.querySelector('.modal.active:not(#welcomeModal)');
+    if (openModal) {
+        closeModal(openModal.id);
+        history.pushState({ page: currentPage }, '', '#' + currentPage);
+        return;
+    }
+    const menu = document.querySelector('.sidebar.active');
+    if (menu) {
+        setSidebarOpen(false);
+        history.pushState({ page: currentPage }, '', '#' + currentPage);
+        return;
+    }
+    const page = event.state?.page || 'dashboard';
+    navigatingBack = true;
+    navigateToPage(page);
+    navigatingBack = false;
+});
 let currentTransactionType = '';
 let currentBalanceType = '';
 let currentBalanceAction = '';
-let dashboardRefreshInterval = null;
+
+// Transactions list filter: all | today | month | date (a picked day)
+let txnRange = 'all';
+let txnDate = '';
 
 // ===================================
 // INITIALIZATION
 // ===================================
 
 document.addEventListener('DOMContentLoaded', function() {
+    applyTheme(document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light');
     initializeNavigation();
     initializeModals();
-    setCurrentDate();
     initializePWA();
-
-    // Auto-update date every minute
-    setInterval(setCurrentDate, 60000);
 
     // Sign-in screen, or straight into the app if already signed in (account.js)
     startAccount();
@@ -98,7 +223,6 @@ document.addEventListener('DOMContentLoaded', function() {
 // Called by account.js once a user is signed in
 function enterInventory() {
     const hasSavedData = loadFromLocalStorage();
-    initializeDashboard();
     updateAllBalances();
     updateBusinessName();
     navigateToPage('dashboard');
@@ -111,24 +235,12 @@ function enterInventory() {
 
 // Called by account.js on sign out: forget the previous user's data in memory
 function leaveInventory() {
-    stopDashboardRefresh();
     inventory = createEmptyInventory();
+    txnRange = 'all';
+    txnDate = '';
     updateAllBalances();
     updateBusinessName();
     navigateToPage('dashboard');
-}
-
-// ===================================
-// DASHBOARD INITIALIZATION
-// ===================================
-
-function initializeDashboard() {
-    updateDashboard();
-    
-    // Start auto-refresh for dashboard when on dashboard page
-    if (currentPage === 'dashboard') {
-        startDashboardRefresh();
-    }
 }
 
 // ===================================
@@ -166,7 +278,14 @@ function loadFromLocalStorage() {
 
 function saveToLocalStorage() {
     const key = inventoryStorageKey();
-    if (key) localStorage.setItem(key, JSON.stringify(inventory));
+    if (!key) return false;
+    try {
+        localStorage.setItem(key, JSON.stringify(inventory));
+        return true;
+    } catch (error) {
+        console.error('Could not save inventory', error);
+        return false;
+    }
 }
 
 // ===================================
@@ -176,24 +295,29 @@ function saveToLocalStorage() {
 function openWelcomeModal() {
     document.getElementById('welcomeBusinessName').value =
         inventory.settings.businessName || account?.profile?.business_name || '';
-    document.getElementById('welcomeCash').value = '';
-    document.getElementById('welcomeGcash').value = '';
+    ['Cash', 'Gcash', 'Maya', 'Bank'].forEach(name => {
+        const input = document.getElementById('welcome' + name);
+        if (input) input.value = '';
+    });
     document.getElementById('welcomeModal').classList.add('active');
 }
 
 function saveWelcomeSetup() {
-    const cash = parseFloat(document.getElementById('welcomeCash').value);
-    const gcash = parseFloat(document.getElementById('welcomeGcash').value);
+    const read = id => {
+        const value = parseFloat(document.getElementById(id)?.value);
+        return value > 0 ? round2(value) : 0;
+    };
 
     inventory.settings.businessName = document.getElementById('welcomeBusinessName').value.trim();
-    inventory.cash = cash > 0 ? cash : 0;
-    inventory.gcash = gcash > 0 ? gcash : 0;
+    inventory.accounts.cash = read('welcomeCash');
+    inventory.accounts.gcash = read('welcomeGcash');
+    inventory.accounts.maya = read('welcomeMaya');
+    inventory.accounts.bank = read('welcomeBank');
 
     saveToLocalStorage();
     closeModal('welcomeModal');
     updateBusinessName();
     updateAllBalances();
-    updateDashboard();
     showNotification('Your inventory is ready!', 'success');
 
     // First sign-in on this device: show how the app works (tour.js)
@@ -210,26 +334,73 @@ function updateBusinessName() {
 // NAVIGATION
 // ===================================
 
-function initializeNavigation() {
-    const menuItems = document.querySelectorAll('.menu-item a, .bottom-nav a[data-page]');
-    const sidebarToggle = document.getElementById('sidebarToggle');
-    const sidebarOverlay = document.getElementById('sidebarOverlay');
-    const bottomNavMore = document.getElementById('bottomNavMore');
+// What the + menu offers first, depending on the tab you are on
+const FAB_ACTIONS = {
+    'new-transaction': () => openTransactionModal(),
+    'add-rate': () => openRateModal(),
+    'fin-add': () => openFinanceModal('add'),
+    'fin-withdraw': () => openFinanceModal('withdraw'),
+    'fin-transfer': () => openFinanceModal('transfer')
+};
 
-    menuItems.forEach(item => {
-        item.addEventListener('click', function(e) {
+function fabContextItems(page) {
+    if (page === 'rates') {
+        return [{ action: 'add-rate', icon: 'plus', label: 'Add Rate' }];
+    }
+    if (page === 'inventory') {
+        return [
+            { action: 'fin-add', icon: 'plus', label: 'Add Capital' },
+            { action: 'fin-withdraw', icon: 'minus', label: 'Withdrawal' },
+            { action: 'fin-transfer', icon: 'repeat', label: 'Transfer' }
+        ];
+    }
+    return [{ action: 'new-transaction', icon: 'plus', label: 'New Transaction' }];
+}
+
+function renderFabMenu(page) {
+    const menu = document.querySelector('.sidebar-menu');
+    if (!menu) return;
+    menu.querySelectorAll('li[data-context]').forEach(li => li.remove());
+    const items = fabContextItems(page);
+    const fragment = document.createDocumentFragment();
+    items.forEach(item => {
+        const li = document.createElement('li');
+        li.className = 'menu-item';
+        li.dataset.context = '1';
+        li.innerHTML = `<a href="#" data-action="${item.action}">${icon(item.icon)}<span>${item.label}</span></a>`;
+        fragment.appendChild(li);
+    });
+    menu.insertBefore(fragment, menu.firstChild);
+
+    // Finance shows the "more" dots like a speed-dial; other tabs show +
+    const use = document.querySelector('#fabButton use');
+    if (use) use.setAttribute('href', page === 'inventory' ? '#i-dots' : '#i-plus');
+}
+
+function initializeNavigation() {
+    const tabs = document.querySelectorAll('.tt-tab');
+    const menu = document.querySelector('.sidebar-menu');
+    const sidebarOverlay = document.getElementById('sidebarOverlay');
+    const fab = document.getElementById('fabButton');
+
+    tabs.forEach(tab => {
+        tab.addEventListener('click', function(e) {
             e.preventDefault();
-            const page = this.getAttribute('data-page');
-            if (page) {
-                navigateToPage(page);
-            }
             setSidebarOpen(false);
+            navigateToPage(this.getAttribute('data-page'));
         });
     });
 
-    if (sidebarToggle) {
-        sidebarToggle.addEventListener('click', function() {
+    // One listener for the whole menu, because its first items are rebuilt per tab
+    if (menu) {
+        menu.addEventListener('click', function(e) {
+            const link = e.target.closest('a');
+            if (!link) return;
+            e.preventDefault();
             setSidebarOpen(false);
+            const action = FAB_ACTIONS[link.dataset.action];
+            if (action) action();
+            else if (link.dataset.page) navigateToPage(link.dataset.page);
         });
     }
 
@@ -237,76 +408,77 @@ function initializeNavigation() {
         sidebarOverlay.addEventListener('click', () => setSidebarOpen(false));
     }
 
-    if (bottomNavMore) {
-        bottomNavMore.addEventListener('click', function() {
-            const sidebar = document.querySelector('.sidebar');
-            setSidebarOpen(!sidebar.classList.contains('active'));
+    if (fab) {
+        fab.addEventListener('click', function() {
+            // On Trans and Rates the + goes straight to the form
+            const direct = { dashboard: () => openTransactionModal(), rates: () => openRateModal() }[currentPage];
+            if (direct) {
+                setSidebarOpen(false);
+                direct();
+                return;
+            }
+            const panel = document.querySelector('.sidebar');
+            setSidebarOpen(!panel.classList.contains('active'));
         });
     }
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') setSidebarOpen(false);
+    });
+
+    renderFabMenu('dashboard');
 }
 
-// Mobile drawer (sidebar slides in over content on small screens)
+// The + button's pop-up menu
 function setSidebarOpen(open) {
-    const sidebar = document.querySelector('.sidebar');
+    const menu = document.querySelector('.sidebar');
     const overlay = document.getElementById('sidebarOverlay');
-    if (!sidebar) return;
-    sidebar.classList.toggle('active', open);
+    const fab = document.getElementById('fabButton');
+    if (!menu) return;
+    menu.classList.toggle('active', open);
     if (overlay) overlay.classList.toggle('active', open);
+    if (fab) {
+        fab.classList.toggle('is-open', open);
+        fab.setAttribute('aria-expanded', String(open));
+    }
 }
 
 function navigateToPage(page) {
-    // Hide all pages
-    document.querySelectorAll('.page-content').forEach(p => p.style.display = 'none');
-    
-    // Show selected page
-    const selectedPage = document.getElementById(`${page}-page`);
-    if (selectedPage) {
-        selectedPage.style.display = 'block';
-    }
-    
-    // Update active menu item
-    document.querySelectorAll('.menu-item').forEach(item => item.classList.remove('active'));
-    const activeMenuItem = document.querySelector(`.menu-item a[data-page="${page}"]`)?.parentElement;
-    if (activeMenuItem) {
-        activeMenuItem.classList.add('active');
-    }
+    if (!document.getElementById(`${page}-page`)) page = 'dashboard';
 
-    // Update bottom tab bar (reports/settings live under "More")
-    document.querySelectorAll('.bottom-nav-item').forEach(item => {
-        const pages = (item.dataset.page || item.dataset.morePages || '').split(' ');
-        item.classList.toggle('active', pages.includes(page));
+    // Hide all pages, show the selected one
+    document.querySelectorAll('.page-content').forEach(p => p.style.display = 'none');
+    document.getElementById(`${page}-page`).style.display = 'block';
+
+    // Active tab (Reports, Subscription and Settings live in the + menu)
+    document.querySelectorAll('.tt-tab').forEach(tab => {
+        tab.classList.toggle('active', tab.dataset.page === page);
     });
+    document.querySelectorAll('.menu-item').forEach(item => item.classList.remove('active'));
+    document.querySelector(`.menu-item a[data-page="${page}"]`)?.parentElement.classList.add('active');
 
     window.scrollTo(0, 0);
-    
-    // Update page title
-    const pageTitle = document.getElementById('pageTitle');
-    if (pageTitle) {
-        pageTitle.textContent = PAGE_TITLES[page] || page.charAt(0).toUpperCase() + page.slice(1);
+
+    if (currentPage !== page && !navigatingBack) {
+        history.pushState({ page }, '', '#' + page);
     }
-    
     currentPage = page;
     document.body.dataset.page = page;
+    renderFabMenu(page);
 
     // Load page-specific content
-    switch(page) {
+    switch (page) {
         case 'dashboard':
-            updateDashboard();
-            break;
-        case 'transactions':
             loadTransactions();
             break;
-        case 'customers':
-            loadCustomers();
+        case 'rates':
+            loadRates();
             break;
         case 'inventory':
             updateInventoryPage();
             break;
         case 'reports':
             loadReports();
-            break;
-        case 'settings':
-            loadSettings();
             break;
         case 'subscription':
             renderSubscriptionPage();
@@ -318,239 +490,148 @@ function navigateToPage(page) {
 }
 
 // ===================================
-// DASHBOARD
-// ===================================
-
-function startDashboardRefresh() {
-    // Clear any existing interval
-    if (dashboardRefreshInterval) {
-        clearInterval(dashboardRefreshInterval);
-    }
-    // Refresh every 30 seconds
-    dashboardRefreshInterval = setInterval(updateDashboard, 30000);
-}
-
-function stopDashboardRefresh() {
-    if (dashboardRefreshInterval) {
-        clearInterval(dashboardRefreshInterval);
-        dashboardRefreshInterval = null;
-    }
-}
-
-function updateDashboard() {
-    const today = new Date().toDateString();
-    const yesterday = new Date(Date.now() - 86400000).toDateString();
-    
-    const todayTransactions = inventory.transactions.filter(t => 
-        new Date(t.date).toDateString() === today
-    );
-    
-    const yesterdayTransactions = inventory.transactions.filter(t => 
-        new Date(t.date).toDateString() === yesterday
-    );
-    
-    const cashInTransactions = todayTransactions.filter(t => t.type === 'cashin');
-    const cashOutTransactions = todayTransactions.filter(t => t.type === 'cashout');
-    
-    const todayCashIn = cashInTransactions.reduce((sum, t) => sum + t.amount, 0);
-    const todayCashOut = cashOutTransactions.reduce((sum, t) => sum + t.amount, 0);
-    const todayProfit = todayTransactions.reduce((sum, t) => sum + t.fee, 0);
-    
-    // Yesterday's data for comparison
-    const yesterdayCashIn = yesterdayTransactions.filter(t => t.type === 'cashin').reduce((sum, t) => sum + t.amount, 0);
-    const yesterdayCashOut = yesterdayTransactions.filter(t => t.type === 'cashout').reduce((sum, t) => sum + t.amount, 0);
-    const yesterdayProfit = yesterdayTransactions.reduce((sum, t) => sum + t.fee, 0);
-    
-    // Calculate trends
-    const cashInTrend = calculateTrend(todayCashIn, yesterdayCashIn);
-    const cashOutTrend = calculateTrend(todayCashOut, yesterdayCashOut);
-    const profitTrend = calculateTrend(todayProfit, yesterdayProfit);
-    
-    // Get active customers (this month)
-    const thisMonth = new Date().getMonth();
-    const thisYear = new Date().getFullYear();
-    const activeCustomersThisMonth = new Set(
-        inventory.transactions
-            .filter(t => {
-                const tDate = new Date(t.date);
-                return tDate.getMonth() === thisMonth && tDate.getFullYear() === thisYear;
-            })
-            .map(t => t.customer)
-    ).size;
-    
-    // Update summary cards with animations
-    animateValue('todayCashIn', todayCashIn);
-    animateValue('todayCashInCount', cashInTransactions.length, false);
-    animateValue('todayCashOut', todayCashOut);
-    animateValue('todayCashOutCount', cashOutTransactions.length, false);
-    animateValue('todayProfit', todayProfit);
-    animateValue('activeCustomers', activeCustomersThisMonth, false);
-    
-    // Update trend indicators
-    updateTrendIndicator('cashInTrend', cashInTrend);
-    updateTrendIndicator('cashOutTrend', cashOutTrend);
-    updateTrendIndicator('profitTrend', profitTrend);
-    
-    // Load recent transactions
-    loadRecentTransactions();
-    
-    // Update dashboard stats
-    updateDashboardStats();
-}
-
-function calculateTrend(today, yesterday) {
-    if (yesterday === 0) return today > 0 ? 100 : 0;
-    return ((today - yesterday) / yesterday) * 100;
-}
-
-function animateValue(elementId, endValue, isCurrency = true) {
-    const element = document.getElementById(elementId);
-    if (!element) return;
-    
-    const startValue = parseInt(element.textContent.replace(/,/g, '')) || 0;
-    const duration = 1000; // 1 second
-    const startTime = performance.now();
-    
-    function animate(currentTime) {
-        const elapsed = currentTime - startTime;
-        const progress = Math.min(elapsed / duration, 1);
-        
-        const currentValue = Math.floor(startValue + (endValue - startValue) * progress);
-        element.textContent = isCurrency ? currentValue.toLocaleString() : currentValue;
-        
-        if (progress < 1) {
-            requestAnimationFrame(animate);
-        }
-    }
-    
-    requestAnimationFrame(animate);
-}
-
-function updateTrendIndicator(elementId, trend) {
-    let element = document.getElementById(elementId);
-    
-    if (!element) {
-        // Create trend indicator if it doesn't exist
-        const cardElement = document.getElementById(elementId.replace('Trend', ''))?.closest('.summary-card');
-        if (cardElement) {
-            const countDiv = cardElement.querySelector('.count');
-            if (countDiv) {
-                const trendDiv = document.createElement('div');
-                trendDiv.id = elementId;
-                trendDiv.style.cssText = 'font-size: 0.875rem; margin-top: 0.25rem;';
-                countDiv.after(trendDiv);
-                element = trendDiv;
-            }
-        }
-    }
-    
-    if (element) {
-        const arrow = trend > 0 ? '▲' : trend < 0 ? '▼' : '→';
-        const color = trend > 0 ? '#10b981' : trend < 0 ? '#ef4444' : '#94a3b8';
-        const sign = trend > 0 ? '+' : '';
-        
-        element.innerHTML = `<span style="color: ${color}; font-weight: 600;">${arrow} ${sign}${Math.abs(trend).toFixed(1)}%</span> vs yesterday`;
-    }
-}
-
-function updateDashboardStats() {
-    // Calculate additional statistics
-    const totalTransactions = inventory.transactions.length;
-    const totalRevenue = inventory.transactions.reduce((sum, t) => sum + t.fee, 0);
-    const avgTransactionValue = totalTransactions > 0 
-        ? inventory.transactions.reduce((sum, t) => sum + t.amount, 0) / totalTransactions 
-        : 0;
-    
-    // Update if stats section exists
-    const statsSection = document.getElementById('dashboardStats');
-    if (statsSection) {
-        statsSection.innerHTML = `
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem;">
-                <div style="padding: 1rem; background: var(--bg-secondary); border-radius: var(--border-radius-sm);">
-                    <div style="font-size: 0.875rem; color: var(--text-muted);">Total Transactions</div>
-                    <div style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary);">${totalTransactions}</div>
-                </div>
-                <div style="padding: 1rem; background: var(--bg-secondary); border-radius: var(--border-radius-sm);">
-                    <div style="font-size: 0.875rem; color: var(--text-muted);">Total Revenue</div>
-                    <div style="font-size: 1.5rem; font-weight: 700; color: var(--primary);">₱${totalRevenue.toLocaleString()}</div>
-                </div>
-                <div style="padding: 1rem; background: var(--bg-secondary); border-radius: var(--border-radius-sm);">
-                    <div style="font-size: 0.875rem; color: var(--text-muted);">Avg Transaction</div>
-                    <div style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary);">₱${Math.round(avgTransactionValue).toLocaleString()}</div>
-                </div>
-            </div>
-        `;
-    }
-}
-
-function loadRecentTransactions() {
-    const list = document.getElementById('recentTransactionsList');
-    if (!list) return;
-
-    const recent = inventory.transactions.slice(-5).reverse();
-
-    if (recent.length === 0) {
-        list.innerHTML = `
-            <div class="empty-state">
-                <span class="empty-state-icon">${icon('clipboard')}</span>
-                <div class="empty-state-title">No transactions yet</div>
-                <div class="empty-state-text">Your Cash In and Cash Out records will show here.</div>
-                <button onclick="openTransactionModal('cashin')" class="btn btn-primary">
-                    ${icon('plus')} Add Transaction
-                </button>
-            </div>
-        `;
-        return;
-    }
-
-    list.innerHTML = recent.map(t => {
-        const isIn = t.type === 'cashin';
-        return `
-            <div class="txn-row">
-                <span class="txn-icon ${isIn ? 'is-in' : 'is-out'}">${icon(isIn ? 'in' : 'out')}</span>
-                <div class="txn-main">
-                    <div class="txn-name">${escapeHtml(t.customer)}</div>
-                    <div class="txn-meta">${isIn ? 'Cash In' : 'Cash Out'} · ${getTimeAgo(new Date(t.date))}</div>
-                </div>
-                <div class="txn-side">
-                    <div class="txn-amount ${isIn ? 'is-in' : 'is-out'}">${peso(t.amount)}</div>
-                    <div class="txn-fee">Fee ${peso(t.fee)}</div>
-                </div>
-            </div>
-        `;
-    }).join('');
-}
-
-function getTimeAgo(date) {
-    const seconds = Math.floor((new Date() - date) / 1000);
-    
-    if (seconds < 60) return 'Just now';
-    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-    if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
-    
-    return date.toLocaleDateString();
-}
-
-// ===================================
 // TRANSACTIONS
 // ===================================
+
+// Receipt photo for the transaction being entered (a small JPEG data URL)
+let pendingReceipt = '';
+let pendingReceiptBlob = null;
+let savingTransaction = false;
+
+function setReceiptPreview(dataUrl, blob = null) {
+    pendingReceipt = dataUrl || '';
+    pendingReceiptBlob = dataUrl ? blob : null;
+    const box = document.getElementById('receiptPreview');
+    document.getElementById('receiptPreviewImg').src = pendingReceipt;
+    box.hidden = !pendingReceipt;
+}
+
+function clearReceipt() {
+    setReceiptPreview('');
+}
+
+// Shrink the photo so a receipt costs tens of KB, not megabytes of phone storage
+function compressImage(file) {
+    return new Promise((resolve, reject) => {
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload = () => {
+            const scale = Math.min(1, 720 / Math.max(img.width, img.height));
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.max(1, Math.round(img.width * scale));
+            canvas.height = Math.max(1, Math.round(img.height * scale));
+            canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+            URL.revokeObjectURL(url);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.55);
+            canvas.toBlob(blob => resolve({ dataUrl, blob }), 'image/jpeg', 0.55);
+        };
+        img.onerror = () => {
+            URL.revokeObjectURL(url);
+            reject(new Error('Not an image'));
+        };
+        img.src = url;
+    });
+}
+
+async function handleReceiptFile(input) {
+    const file = input.files && input.files[0];
+    input.value = '';
+    if (!file) return;
+    try {
+        const { dataUrl, blob } = await compressImage(file);
+        setReceiptPreview(dataUrl, blob);
+    } catch {
+        showNotification('Could not read that photo', 'error');
+    }
+}
+
+function viewReceipt(id) {
+    const transaction = inventory.transactions.find(t => t.id === id);
+    if (!transaction?.receipt) return;
+    // ImageKit receipts are served resized and optimised; older ones are on this device
+    document.getElementById('receiptImage').src = Cloud.imageUrl(transaction.receipt);
+    document.getElementById('receiptModal').classList.add('active');
+}
 
 function openTransactionModal(type) {
     if (!requireSubscription()) return;
     currentTransactionType = type || '';
+    setReceiptPreview('');
     const modal = document.getElementById('transactionModal');
     const typeSelect = document.getElementById('transactionType');
-    
+
     // Reset first so the preset type below isn't wiped out
     document.getElementById('transactionForm').reset();
-    populateCustomerSelect();
+    const dateInput = document.getElementById('transactionDate');
+    dateInput.value = localDateString(new Date());
+    dateInput.max = localDateString(new Date());
 
-    typeSelect.value = type || '';
+    typeSelect.value = type || 'cashin';
+    if (!type) currentTransactionType = 'cashin';
 
     setSidebarOpen(false);
     modal.classList.add('active');
     updateTransactionForm();
+    setTimeout(() => document.getElementById('transactionAmount').focus(), 120);
+}
+
+function setQuickAmount(value) {
+    const input = document.getElementById('transactionAmount');
+    input.value = value;
+    calculateFee();
+    input.focus();
+}
+
+// Filter chips: All / Today / This month
+function setTransactionRange(range) {
+    txnRange = range;
+    txnDate = '';
+    const dateInput = document.getElementById('dateFilter');
+    if (dateInput) dateInput.value = '';
+    loadTransactions();
+}
+
+// Calendar pop-up (centered): tap a day to show that day's transactions
+let calMonth = new Date();
+
+function openCalendar() {
+    calMonth = txnDate ? new Date(txnDate + 'T00:00:00') : new Date();
+    calMonth.setDate(1);
+    renderCalendar();
+    document.getElementById('calendarModal').classList.add('active');
+}
+
+function shiftCalendar(step) {
+    calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth() + step, 1);
+    renderCalendar();
+}
+
+function renderCalendar() {
+    const year = calMonth.getFullYear();
+    const month = calMonth.getMonth();
+    document.getElementById('calTitle').textContent = calMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    const today = localDateString(new Date());
+    const blanks = new Date(year, month, 1).getDay();
+    const days = new Date(year, month + 1, 0).getDate();
+    let html = '<span></span>'.repeat(blanks);
+    for (let day = 1; day <= days; day++) {
+        const value = localDateString(new Date(year, month, day));
+        const cls = ['cal-day', value === txnDate ? 'is-selected' : '', value === today ? 'is-today' : ''].join(' ');
+        html += `<button type="button" class="${cls}" ${value > today ? 'disabled' : ''} onclick="pickCalendarDay('${value}')">${day}</button>`;
+    }
+    document.getElementById('calDays').innerHTML = html;
+}
+
+function pickCalendarDay(value) {
+    setTransactionDate(value);
+    closeModal('calendarModal');
+}
+
+// Calendar button: show one day. Clearing the date goes back to All.
+function setTransactionDate(value) {
+    txnDate = value || '';
+    txnRange = txnDate ? 'date' : 'all';
+    loadTransactions();
 }
 
 // Cash In / Cash Out toggle buttons drive the hidden select
@@ -563,511 +644,484 @@ function updateTransactionForm() {
     const type = document.getElementById('transactionType').value;
     currentTransactionType = type;
 
-    document.getElementById('transactionModalTitle').textContent = type === 'cashin' ? 'New Cash In'
-        : type === 'cashout' ? 'New Cash Out'
-        : 'New Transaction';
     document.querySelectorAll('.type-option').forEach(option => {
-        const selected = option.dataset.type === type;
-        option.classList.toggle('active', selected);
-        option.setAttribute('aria-checked', selected);
+        const active = option.dataset.type === type;
+        option.classList.toggle('active', active);
+        option.setAttribute('aria-checked', String(active));
     });
 
     calculateFee();
 }
 
+// Fee for an amount from the Rates table (₱0 if no range matches)
+function lookupFee(type, amount) {
+    const rate = inventory.settings.rates.find(r => amount >= r.min && (r.max === null || amount <= r.max));
+    if (!rate) return 0;
+    return Number(type === 'cashin' ? rate.cashIn : rate.cashOut) || 0;
+}
+
 function calculateFee() {
     const amount = parseFloat(document.getElementById('transactionAmount').value) || 0;
     const type = currentTransactionType;
-    let fee = 0;
-    
-    if (type === 'cashin') {
-        if (amount <= 1000) fee = inventory.settings.cashInFees.tier1;
-        else if (amount <= 3000) fee = inventory.settings.cashInFees.tier2;
-        else fee = inventory.settings.cashInFees.tier3;
-    } else if (type === 'cashout') {
-        if (amount <= 1000) fee = inventory.settings.cashOutFees.tier1;
-        else if (amount <= 3000) fee = inventory.settings.cashOutFees.tier2;
-        else fee = inventory.settings.cashOutFees.tier3;
-    }
-    
+    const fee = type && amount > 0 ? lookupFee(type, amount) : 0;
+
     document.getElementById('transactionFee').value = fee;
-    
+
     let total = amount;
-    if (type === 'cashin') {
-        total = amount + fee;
-    } else if (type === 'cashout') {
-        total = amount - fee;
-    }
-    
-    document.getElementById('transactionTotal').value = total;
+    if (type === 'cashin') total = amount + fee;
+    else if (type === 'cashout') total = amount - fee;
+
+    document.getElementById('transactionTotal').value = round2(total);
 }
 
-function saveTransaction() {
-    if (!requireSubscription()) return;
+async function saveTransaction() {
+    if (savingTransaction || !requireSubscription()) return;
     const type = document.getElementById('transactionType').value;
-    const customerSelect = document.getElementById('customerSelect');
-    const customerName = customerSelect.value ? customerSelect.options[customerSelect.selectedIndex].text : '';
-    const amount = parseFloat(document.getElementById('transactionAmount').value);
-    const fee = parseFloat(document.getElementById('transactionFee').value);
-    const total = parseFloat(document.getElementById('transactionTotal').value);
-    const reference = document.getElementById('referenceNumber').value;
-    const notes = document.getElementById('transactionNotes').value;
+    const account = document.getElementById('transactionAccount').value;
+    const dateValue = document.getElementById('transactionDate').value;
+    const amount = round2(parseFloat(document.getElementById('transactionAmount').value));
+    const fee = round2(parseFloat(document.getElementById('transactionFee').value) || 0);
+    const total = round2(parseFloat(document.getElementById('transactionTotal').value));
+    const reference = document.getElementById('referenceNumber').value.trim();
+    const notes = document.getElementById('transactionNotes').value.trim();
 
-    if (!type || !customerName || !amount) {
+    if (!type || !account || !amount) {
         showNotification('Please fill in all required fields', 'error');
         return;
     }
-    
-    // Validate inventory
-    if (type === 'cashin' && inventory.gcash < amount) {
-        showNotification('Insufficient GCash balance for this transaction', 'error');
+
+    if (!(amount > 0) || !Number.isFinite(total) || total <= 0) {
+        showNotification('Enter a valid amount greater than zero', 'error');
         return;
     }
-    
-    if (type === 'cashout' && inventory.cash < total) {
+
+    // Today keeps the exact time; a back-dated entry is saved at noon of that day
+    const today = localDateString(new Date());
+    if (dateValue > today) {
+        showNotification('The date cannot be in the future', 'error');
+        return;
+    }
+    const date = !dateValue || dateValue === today ? new Date() : new Date(dateValue + 'T12:00:00');
+
+    // Cash In: the customer hands over cash and we send the amount from an account.
+    // Cash Out: we hand over cash and the amount lands in an account.
+    if (type === 'cashin' && inventory.accounts[account] < amount) {
+        showNotification(`Insufficient ${accountLabel(account)} balance for this transaction`, 'error');
+        return;
+    }
+    if (type === 'cashout' && inventory.accounts.cash < total) {
         showNotification('Insufficient cash for this transaction', 'error');
         return;
     }
-    
-    const transaction = {
-        id: Date.now(),
-        date: new Date().toISOString(),
-        type: type,
-        customer: customerName,
-        amount: amount,
-        fee: fee,
-        total: total,
+
+    // Upload the receipt photo to ImageKit when online. If that is not possible,
+    // keep the small photo on this device instead.
+    let receipt = pendingReceipt;
+    let savedNote = '';
+    if (pendingReceiptBlob && Cloud.canUploadReceipts()) {
+        savingTransaction = true;
+        showNotification('Uploading receipt…', 'info');
+        try {
+            receipt = await Cloud.uploadReceipt(pendingReceiptBlob, `receipt-${Date.now()}.jpg`);
+        } catch (error) {
+            console.warn('Receipt upload failed, keeping it on this device', error);
+            savedNote = ' (receipt kept on this device)';
+        } finally {
+            savingTransaction = false;
+        }
+    }
+
+    const record = {
+        id: newRecordId(),
+        date: date.toISOString(),
+        type,
+        account,
+        amount,
+        fee,
+        total,
         status: 'completed',
-        reference: reference,
-        notes: notes
+        reference,
+        notes
     };
-    
-    inventory.transactions.push(transaction);
-    
-    // Update inventory balances
+    if (receipt) record.receipt = receipt;
+    inventory.transactions.push(record);
+
     if (type === 'cashin') {
-        inventory.cash += total;
-        inventory.gcash -= amount;
-    } else if (type === 'cashout') {
-        inventory.cash -= total;
-        inventory.gcash += amount;
+        inventory.accounts.cash += total;
+        inventory.accounts[account] -= amount;
+    } else {
+        inventory.accounts.cash -= total;
+        inventory.accounts[account] += amount;
     }
-    
-    saveToLocalStorage();
+    inventory.accounts.cash = round2(inventory.accounts.cash);
+    inventory.accounts[account] = round2(inventory.accounts[account]);
+
+    let savedMessage = 'Transaction saved successfully!' + savedNote;
+    if (!saveToLocalStorage() && record.receipt) {
+        // Phone storage is full: keep the transaction, drop the photo
+        delete record.receipt;
+        savedMessage = 'Saved without the receipt photo (storage is full)';
+    }
+    if (!saveToLocalStorage()) {
+        loadFromLocalStorage();
+        updateAllBalances();
+        showNotification('Could not save: your device storage is full', 'error');
+        return;
+    }
     closeModal('transactionModal');
-    showNotification('Transaction saved successfully!', 'success');
-    updateDashboard();
+    showNotification(savedMessage, 'success');
     updateAllBalances();
-    
-    if (currentPage === 'transactions') {
-        loadTransactions();
-    }
+    if (currentPage === 'dashboard') loadTransactions();
+}
+
+// Cash In / Cash Out records inside the chosen date filter, newest first
+function getVisibleTransactions() {
+    const now = new Date();
+    const today = localDateString(now);
+    return inventory.transactions
+        .filter(t => t.type === 'cashin' || t.type === 'cashout')
+        .filter(t => {
+            const day = localDateString(new Date(t.date));
+            if (txnRange === 'today') return day === today;
+            if (txnRange === 'month') return day.slice(0, 7) === today.slice(0, 7);
+            if (txnRange === 'date') return day === txnDate;
+            return true;
+        })
+        .sort((a, b) => new Date(b.date) - new Date(a.date));
 }
 
 function loadTransactions() {
-    const tbody = document.getElementById('transactionsTableBody');
-    const filterSelect = document.getElementById('transactionFilter');
-    const dateInput = document.getElementById('dateFilter');
-    
-    if (!tbody) return;
-    
-    // Add event listeners
-    if (filterSelect && !filterSelect.hasAttribute('data-initialized')) {
-        filterSelect.setAttribute('data-initialized', 'true');
-        filterSelect.addEventListener('change', loadTransactions);
-    }
-    
-    if (dateInput && !dateInput.hasAttribute('data-initialized')) {
-        dateInput.setAttribute('data-initialized', 'true');
-        dateInput.addEventListener('change', loadTransactions);
-    }
-    
-    const filter = filterSelect?.value || 'all';
-    const dateFilter = dateInput?.value;
-    
-    let filtered = [...inventory.transactions];
-    
-    if (filter !== 'all') {
-        filtered = filtered.filter(t => t.type === filter);
-    }
-    
-    if (dateFilter) {
-        filtered = filtered.filter(t => 
-            new Date(t.date).toDateString() === new Date(dateFilter).toDateString()
-        );
-    }
-    
-    if (filtered.length === 0) {
-        tbody.innerHTML = `
-            <tr class="row-empty"><td colspan="8" class="cell-empty">
-                <div class="empty-state">
-                    <span class="empty-state-icon">${icon('clipboard')}</span>
-                    <div class="empty-state-title">No transactions found</div>
-                    <div class="empty-state-text">Try another filter, or add a new transaction.</div>
-                </div>
-            </td></tr>`;
-        return;
-    }
+    const rows = getVisibleTransactions();
 
-    tbody.innerHTML = filtered.reverse().map(t => {
+    const totalIn = rows.filter(t => t.type === 'cashin').reduce((sum, t) => sum + t.amount, 0);
+    const totalOut = rows.filter(t => t.type === 'cashout').reduce((sum, t) => sum + t.amount, 0);
+    const revenue = rows.reduce((sum, t) => sum + (t.fee || 0), 0);
+
+    const set = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
+    set('ttRevenue', pesoFull(revenue));
+    set('ttCashIn', pesoFull(totalIn));
+    set('ttCashOut', pesoFull(totalOut));
+    set('ttCount', rows.length);
+
+    document.querySelectorAll('.tt-chip').forEach(chip => chip.classList.toggle('active', chip.dataset.range === txnRange));
+    document.getElementById('ttDateBtn')?.classList.toggle('active', txnRange === 'date');
+
+    const body = document.getElementById('transactionsTableBody');
+    const empty = document.getElementById('ttEmpty');
+    if (!body) return;
+    if (empty) empty.hidden = rows.length > 0;
+    document.getElementById('transactionsTable').hidden = rows.length === 0;
+
+    body.innerHTML = rows.map(t => {
         const isIn = t.type === 'cashin';
+        const d = new Date(t.date);
+        const day = `${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
         return `
         <tr>
-            <td data-label="Date/Time" class="cell-date">${formatDate(t.date)}</td>
-            <td data-label="Type" class="cell-type">
-                <span class="badge ${isIn ? 'badge-in' : 'badge-out'}">
-                    ${icon(isIn ? 'in' : 'out')} ${isIn ? 'Cash In' : 'Cash Out'}
-                </span>
+            <td class="tt-date">${day}<small>${time}</small></td>
+            <td>${escapeHtml(accountLabel(t.account))}</td>
+            <td><span class="tt-badge ${isIn ? 'is-in' : 'is-out'}">${isIn ? 'Cash in' : 'Cash out'}</span></td>
+            <td class="tt-r tt-amt ${isIn ? 'is-in' : 'is-out'}">${pesoFull(t.amount)}<small>Fee ${pesoFull(t.fee)}</small></td>
+            <td class="tt-r tt-actions-cell">
+                ${t.receipt ? `<button type="button" class="tt-receipt" onclick="viewReceipt(${t.id})" aria-label="View receipt">${icon('image')}</button>` : ''}
+                <button type="button" class="tt-del" onclick="deleteTransaction(${t.id})" aria-label="Delete transaction">${icon('trash')}</button>
             </td>
-            <td data-label="Customer" class="cell-customer">${escapeHtml(t.customer)}</td>
-            <td data-label="Amount" class="cell-amount">${peso(t.amount)}</td>
-            <td data-label="Fee" class="cell-fee">${peso(t.fee)}</td>
-            <td data-label="Total" class="cell-total">${peso(t.total)}</td>
-            <td data-label="Status" class="cell-status">
-                <span class="badge badge-success">${escapeHtml(t.status)}</span>
-            </td>
-            <td class="cell-actions">
-                <button onclick="deleteTransaction(${t.id})" class="btn-icon-only btn-icon-danger" title="Delete" aria-label="Delete transaction">
-                    ${icon('trash')}
-                </button>
-            </td>
-        </tr>
-    `;
+        </tr>`;
     }).join('');
+}
+
+// ===================================
+// CSV EXPORT
+// ===================================
+
+function downloadCsv(filename, header, rows) {
+    const cell = v => {
+        const text = String(v ?? '');
+        return /[",\n]/.test(text) ? '"' + text.replace(/"/g, '""') + '"' : text;
+    };
+    const csv = [header, ...rows].map(r => r.map(cell).join(',')).join('\r\n');
+    // BOM so Excel opens the file as UTF-8
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function exportTransactionsCsv() {
+    const rows = getVisibleTransactions();
+    if (!rows.length) {
+        showNotification('No transactions to export', 'error');
+        return;
+    }
+    downloadCsv(`cashg-transactions-${localDateString(new Date())}.csv`,
+        ['Date', 'Time', 'Account', 'Type', 'Amount', 'Fee', 'Total', 'Reference', 'Notes'],
+        rows.map(t => {
+            const d = new Date(t.date);
+            return [localDateString(d), d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+                accountLabel(t.account), t.type === 'cashin' ? 'Cash in' : 'Cash out',
+                t.amount, t.fee || 0, t.total ?? '', t.reference || '', t.notes || ''];
+        }));
+    showNotification('Transactions exported', 'success');
+}
+
+function exportFinanceCsv() {
+    const entries = [...inventory.finance].sort((a, b) => new Date(b.date) - new Date(a.date));
+    if (!entries.length) {
+        showNotification('No finance entries to export', 'error');
+        return;
+    }
+    downloadCsv(`cashg-finance-${localDateString(new Date())}.csv`,
+        ['Date', 'Type', 'Account', 'Other account', 'Amount', 'Note'],
+        entries.map(f => [localDateString(new Date(f.date)), FINANCE_KINDS[f.kind]?.label || f.kind,
+            f.account ? accountLabel(f.account) : '', f.counterparty ? accountLabel(f.counterparty) : '',
+            f.amount, f.note || '']));
+    showNotification('Finance exported', 'success');
 }
 
 function deleteTransaction(id) {
     if (!requireSubscription()) return;
     if (!confirm('Are you sure you want to delete this transaction?')) return;
-    
+
     const transaction = inventory.transactions.find(t => t.id === id);
     if (!transaction) return;
-    
-    // Reverse the transaction effects
+
+    // Work out the balances after reversing, and refuse if they would go negative
+    const account = transaction.account || 'gcash';
+    const after = { ...inventory.accounts };
     if (transaction.type === 'cashin') {
-        inventory.cash -= transaction.total;
-        inventory.gcash += transaction.amount;
+        after.cash -= transaction.total;
+        after[account] += transaction.amount;
     } else if (transaction.type === 'cashout') {
-        inventory.cash += transaction.total;
-        inventory.gcash -= transaction.amount;
+        after.cash += transaction.total;
+        after[account] -= transaction.amount;
     }
-    
+    if (Object.values(after).some(v => v < -0.005)) {
+        showNotification('Cannot delete: it would make a balance negative', 'error');
+        return;
+    }
+
+    ACCOUNTS.forEach(a => { inventory.accounts[a.id] = round2(after[a.id]); });
     inventory.transactions = inventory.transactions.filter(t => t.id !== id);
     saveToLocalStorage();
     showNotification('Transaction deleted', 'success');
-    loadTransactions();
     updateAllBalances();
-    updateDashboard();
+    loadTransactions();
 }
 
 // ===================================
-// CUSTOMERS
+// RATES
 // ===================================
 
-let customerSortField = 'id';
-let customerSortOrder = 'asc';
-
-function openCustomerModal() {
-    if (!requireSubscription()) return;
-    const modal = document.getElementById('customerModal');
-    document.getElementById('customerForm').reset();
-
-    // Undo any leftover "edit" state from a cancelled edit
-    document.getElementById('customerModalTitle').textContent = 'Add Customer';
-    const saveBtn = modal.querySelector('.modal-footer .btn-primary');
-    saveBtn.textContent = 'Save Customer';
-    saveBtn.onclick = saveCustomer;
-
-    setSidebarOpen(false);
-    modal.classList.add('active');
+function formatRange(rate) {
+    const from = Number(rate.min).toLocaleString();
+    return rate.max === null ? `${from} and up` : `${from} – ${Number(rate.max).toLocaleString()}`;
 }
 
-function saveCustomer() {
-    if (!requireSubscription()) return;
-    const name = document.getElementById('customerName').value;
-    const phone = document.getElementById('customerPhone').value;
-    const gcash = document.getElementById('customerGCash').value;
-    const notes = document.getElementById('customerNotes').value;
-    
-    if (!name || !phone) {
-        showNotification('Please fill in required fields', 'error');
-        return;
-    }
-    
-    const customer = {
-        id: Date.now(),
-        name,
-        phone,
-        gcash: gcash || phone,
-        notes
-    };
-    
-    inventory.customers.push(customer);
-    saveToLocalStorage();
-    closeModal('customerModal');
-    showNotification('Customer added successfully!', 'success');
-    
-    if (currentPage === 'customers') {
-        loadCustomers();
-    }
-}
-
-function sortCustomers(field) {
-    if (customerSortField === field) {
-        // Toggle sort order if same field
-        customerSortOrder = customerSortOrder === 'asc' ? 'desc' : 'asc';
-    } else {
-        // New field, default to ascending
-        customerSortField = field;
-        customerSortOrder = 'asc';
-    }
-    
-    loadCustomers();
-}
-
-function loadCustomers() {
-    const tbody = document.getElementById('customersTableBody');
-    const searchInput = document.getElementById('customerSearch');
-    const countElement = document.getElementById('customerCount');
-    
-    if (!tbody) return;
-    
-    // Add search event listener
-    if (searchInput && !searchInput.hasAttribute('data-initialized')) {
-        searchInput.setAttribute('data-initialized', 'true');
-        searchInput.addEventListener('input', function() {
-            loadCustomers();
-        });
-    }
-    
-    // Get search term
-    const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
-    
-    // Filter customers
-    let filteredCustomers = inventory.customers;
-    if (searchTerm) {
-        filteredCustomers = inventory.customers.filter(c => 
-            c.name.toLowerCase().includes(searchTerm) ||
-            c.phone.includes(searchTerm) ||
-            (c.gcash && c.gcash.includes(searchTerm)) ||
-            (c.notes && c.notes.toLowerCase().includes(searchTerm))
-        );
-    }
-    
-    // Sort customers
-    filteredCustomers.sort((a, b) => {
-        let aVal = a[customerSortField] || '';
-        let bVal = b[customerSortField] || '';
-        
-        // Convert to string for comparison
-        aVal = String(aVal).toLowerCase();
-        bVal = String(bVal).toLowerCase();
-        
-        if (customerSortOrder === 'asc') {
-            return aVal > bVal ? 1 : -1;
-        } else {
-            return aVal < bVal ? 1 : -1;
-        }
-    });
-    
-    // Update count
-    if (countElement) {
-        countElement.textContent = filteredCustomers.length;
-    }
-    
-    // Update sort indicators
-    document.querySelectorAll('#customersTable .sort-indicator').forEach(indicator => {
-        indicator.textContent = '⇅';
-        indicator.style.color = 'var(--text-muted)';
-    });
-    
-    const activeHeader = document.querySelector(`#customersTable th[onclick*="${customerSortField}"]`);
-    if (activeHeader) {
-        const indicator = activeHeader.querySelector('.sort-indicator');
-        if (indicator) {
-            indicator.textContent = customerSortOrder === 'asc' ? '↑' : '↓';
-            indicator.style.color = 'var(--primary)';
-        }
-    }
-    
-    if (filteredCustomers.length === 0) {
-        tbody.innerHTML = `
-            <tr class="row-empty"><td colspan="6" class="cell-empty">
-                <div class="empty-state">
-                    <span class="empty-state-icon">${icon('users')}</span>
-                    <div class="empty-state-title">${searchTerm ? 'No matching customers' : 'No customers yet'}</div>
-                    <div class="empty-state-text">${searchTerm ? 'Try a different name or number.' : 'Save regular customers for faster transactions.'}</div>
-                    ${!searchTerm ? `<button onclick="openCustomerModal()" class="btn btn-primary">${icon('user-plus')} Add Customer</button>` : ''}
-                </div>
-            </td></tr>
-        `;
-        return;
-    }
-
-    const empty = '<span class="text-muted">—</span>';
-
-    tbody.innerHTML = filteredCustomers.map((c, index) => `
+function loadRates() {
+    const rates = [...inventory.settings.rates].sort((a, b) => a.min - b.min);
+    document.getElementById('rateCount').textContent = rates.length;
+    document.getElementById('ratesEmpty').hidden = rates.length > 0;
+    document.getElementById('ratesTableBody').innerHTML = rates.map(r => `
         <tr>
-            <td class="customer-id" data-label="#">${index + 1}</td>
-            <td class="customer-name" data-label="Name">
-                <div class="customer-name-wrap">
-                    <span class="avatar">${escapeHtml(c.name.charAt(0).toUpperCase())}</span>
-                    <span>${escapeHtml(c.name)}</span>
-                </div>
-            </td>
-            <td class="customer-contact" data-label="Phone">
-                <a href="tel:${escapeHtml(c.phone)}" class="contact-link">${icon('phone')} ${escapeHtml(c.phone)}</a>
-            </td>
-            <td class="customer-contact ${c.gcash ? '' : 'is-empty'}" data-label="GCash">
-                ${c.gcash ? `<span class="contact-link">${icon('phone-device')} ${escapeHtml(c.gcash)}</span>` : empty}
-            </td>
-            <td class="customer-notes ${c.notes ? '' : 'is-empty'}" data-label="Notes" title="${escapeHtml(c.notes || '')}">
-                ${c.notes ? escapeHtml(c.notes) : empty}
-            </td>
-            <td class="cell-actions">
-                <div class="action-buttons-group">
-                    <button onclick="editCustomer(${c.id})" class="btn-icon-only" title="Edit" aria-label="Edit customer">
-                        ${icon('pencil')}
-                    </button>
-                    <button onclick="deleteCustomer(${c.id})" class="btn-icon-only btn-icon-danger" title="Delete" aria-label="Delete customer">
-                        ${icon('trash')}
-                    </button>
-                </div>
+            <td>${formatRange(r)}</td>
+            <td class="tt-r">${pesoFull(r.cashIn)}</td>
+            <td class="tt-r">${pesoFull(r.cashOut)}</td>
+            <td class="tt-r">
+                <button type="button" class="tt-del" onclick="deleteRate(${r.id})" aria-label="Delete rate">${icon('trash')}</button>
             </td>
         </tr>
     `).join('');
 }
 
-function editCustomer(id) {
-    if (!requireSubscription()) return;
-    const customer = inventory.customers.find(c => c.id === id);
-    if (!customer) return;
-    
-    document.getElementById('customerName').value = customer.name;
-    document.getElementById('customerPhone').value = customer.phone;
-    document.getElementById('customerGCash').value = customer.gcash;
-    document.getElementById('customerNotes').value = customer.notes || '';
-    
-    // Change the save button to update
-    const modal = document.getElementById('customerModal');
-    document.getElementById('customerModalTitle').textContent = 'Edit Customer';
-    const saveBtn = modal.querySelector('.modal-footer .btn-primary');
-    saveBtn.textContent = 'Update Customer';
-    saveBtn.onclick = function() {
-        updateCustomer(id);
-    };
-    
-    modal.classList.add('active');
+function openRateModal() {
+    document.getElementById('rateForm').reset();
+    document.getElementById('rateModal').classList.add('active');
+    setTimeout(() => document.getElementById('rateMin').focus(), 120);
 }
 
-function updateCustomer(id) {
-    if (!requireSubscription()) return;
-    const customer = inventory.customers.find(c => c.id === id);
-    if (!customer) return;
-    
-    customer.name = document.getElementById('customerName').value;
-    customer.phone = document.getElementById('customerPhone').value;
-    customer.gcash = document.getElementById('customerGCash').value;
-    customer.notes = document.getElementById('customerNotes').value;
-    
-    saveToLocalStorage();
-    closeModal('customerModal');
-    showNotification('Customer updated successfully!', 'success');
-    loadCustomers();
-    
-    // Reset the button
-    const modal = document.getElementById('customerModal');
-    document.getElementById('customerModalTitle').textContent = 'Add Customer';
-    const saveBtn = modal.querySelector('.modal-footer .btn-primary');
-    saveBtn.textContent = 'Save Customer';
-    saveBtn.onclick = saveCustomer;
-}
+function addRate() {
+    const min = parseFloat(document.getElementById('rateMin').value);
+    const maxRaw = document.getElementById('rateMax').value;
+    const max = maxRaw === '' ? null : parseFloat(maxRaw);
+    const cashIn = parseFloat(document.getElementById('rateIn').value);
+    const cashOut = parseFloat(document.getElementById('rateOut').value);
 
-function deleteCustomer(id) {
-    if (!requireSubscription()) return;
-    const customer = inventory.customers.find(c => c.id === id);
-    if (!customer) return;
-    
-    if (!confirm(`Are you sure you want to delete ${customer.name}?`)) return;
-    
-    inventory.customers = inventory.customers.filter(c => c.id !== id);
-    saveToLocalStorage();
-    showNotification('Customer deleted', 'success');
-    loadCustomers();
-}
-
-function populateCustomerSelect() {
-    const select = document.getElementById('customerSelect');
-    if (!select) return;
-    
-    select.innerHTML = '<option value="">Select customer</option>' +
-        '<option value="walkin">Walk-in customer</option>' +
-        inventory.customers.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
-}
-
-// ===================================
-// INVENTORY
-// ===================================
-
-function updateInventoryPage() {
-    document.getElementById('cashBalance').textContent = inventory.cash.toLocaleString();
-    document.getElementById('walletBalance').textContent = inventory.gcash.toLocaleString();
-    document.getElementById('totalAssets').textContent = (inventory.cash + inventory.gcash).toLocaleString();
-    document.getElementById('availableCashOut').textContent = inventory.cash.toLocaleString();
-    document.getElementById('availableCashIn').textContent = inventory.gcash.toLocaleString();
-}
-
-function adjustBalance(type, action) {
-    if (!requireSubscription()) return;
-    currentBalanceType = type;
-    currentBalanceAction = action;
-    
-    const modal = document.getElementById('balanceModal');
-    const title = document.getElementById('balanceModalTitle');
-    
-    title.textContent = `${action === 'add' ? 'Add' : 'Remove'} ${type === 'cash' ? 'Cash' : 'GCash Balance'}`;
-    
-    document.getElementById('balanceForm').reset();
-    modal.classList.add('active');
-}
-
-function saveBalanceAdjustment() {
-    if (!requireSubscription()) return;
-    const amount = parseFloat(document.getElementById('balanceAmount').value);
-    const reason = document.getElementById('balanceReason').value;
-    
-    if (!amount || !reason) {
-        showNotification('Please fill in all fields', 'error');
+    if (!(min >= 0) || !(cashIn >= 0) || !(cashOut >= 0) || (max !== null && !(max >= min))) {
+        showNotification('Check the range and fees. "To" must be higher than "From".', 'error');
         return;
     }
-    
-    const adjustment = currentBalanceAction === 'add' ? amount : -amount;
-    
-    if (currentBalanceType === 'cash') {
-        inventory.cash += adjustment;
-    } else {
-        inventory.gcash += adjustment;
+
+    const overlaps = inventory.settings.rates.some(r =>
+        min <= (r.max === null ? Infinity : r.max) && (max === null ? Infinity : max) >= r.min);
+    if (overlaps) {
+        showNotification('That range overlaps an existing rate', 'error');
+        return;
     }
-    
-    // Log as transaction
-    inventory.transactions.push({
-        id: Date.now(),
-        date: new Date().toISOString(),
-        type: 'adjustment',
-        customer: 'System',
-        amount: amount,
-        fee: 0,
-        total: adjustment,
-        status: 'completed',
-        reference: '',
-        notes: reason
-    });
-    
+
+    inventory.settings.rates.push({ id: newRecordId(), min, max, cashIn: round2(cashIn), cashOut: round2(cashOut) });
     saveToLocalStorage();
-    closeModal('balanceModal');
-    showNotification('Balance adjusted successfully!', 'success');
-    updateInventoryPage();
+    closeModal('rateModal');
+    if (currentPage === 'rates') loadRates();
+    showNotification('Rate added', 'success');
+}
+
+function deleteRate(id) {
+    if (!confirm('Delete this rate?')) return;
+    inventory.settings.rates = inventory.settings.rates.filter(r => r.id !== id);
+    saveToLocalStorage();
+    loadRates();
+}
+
+// ===================================
+// FINANCE (capital, withdrawals, transfers)
+// ===================================
+
+let financeMode = 'add';
+
+function financeDay(value) {
+    const d = new Date(value);
+    return `${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function updateInventoryPage() {
+    const sum = kind => round2(inventory.finance.filter(f => f.kind === kind).reduce((total, f) => total + f.amount, 0));
+    document.getElementById('finCapital').textContent = pesoFull(sum('add'));
+    document.getElementById('finWithdrawals').textContent = pesoFull(sum('withdraw'));
+
+    const total = ACCOUNTS.reduce((acc, a) => acc + inventory.accounts[a.id], 0);
+    document.getElementById('accountList').innerHTML = ACCOUNTS.map(a => `
+        <li class="tt-account">
+            <span class="tt-dot ${a.digital ? 'is-digital' : 'is-cash'}"></span>
+            <span class="tt-account-name">${a.label}</span>
+            <strong class="tt-account-amount ${inventory.accounts[a.id] < 0 ? 'is-neg' : ''}">${pesoFull(inventory.accounts[a.id])}</strong>
+        </li>`).join('') + `
+        <li class="tt-account tt-account-total">
+            <span class="tt-account-name">Total assets</span>
+            <strong class="tt-account-amount">${pesoFull(total)}</strong>
+        </li>`;
+
+    const entries = [...inventory.finance].sort((a, b) => new Date(b.date) - new Date(a.date));
+    document.getElementById('finCount').textContent = entries.length;
+    document.getElementById('finEmpty').hidden = entries.length > 0;
+    document.getElementById('financeBody').innerHTML = entries.map(f => {
+        const kind = FINANCE_KINDS[f.kind];
+        const positive = f.kind === 'add' || f.kind === 'receive';
+        const other = f.counterparty ? `<small>${f.kind === 'send' ? 'To' : 'From'} ${escapeHtml(accountLabel(f.counterparty))}</small>` : (f.note ? `<small class="tt-note">${escapeHtml(f.note)}</small>` : '');
+        return `
+        <tr>
+            <td class="tt-date">${financeDay(f.date)}</td>
+            <td><span class="tt-badge ${kind.cls}">${kind.label}</span></td>
+            <td>${escapeHtml(f.account ? accountLabel(f.account) : '—')}${other}</td>
+            <td class="tt-r tt-amt ${positive ? 'is-in' : 'is-out'}">${pesoFull(f.amount)}</td>
+            <td class="tt-r">${f.legacy ? '' : `<button type="button" class="tt-del" onclick="deleteFinance(${f.id})" aria-label="Delete entry">${icon('trash')}</button>`}</td>
+        </tr>`;
+    }).join('');
+}
+
+function openFinanceModal(mode) {
+    if (!requireSubscription()) return;
+    financeMode = mode;
+    const titles = { add: 'Add Capital', withdraw: 'Withdrawal', transfer: 'Transfer Balance' };
+    document.getElementById('financeModalTitle').textContent = titles[mode];
+    document.getElementById('financeForm').reset();
+    const finDate = document.getElementById('finDate');
+    finDate.value = localDateString(new Date());
+    finDate.max = localDateString(new Date());
+    document.getElementById('financeSaveBtn').textContent = { add: 'Save Capital', withdraw: 'Process Withdrawal', transfer: 'Process Transfer' }[mode];
+    document.getElementById('finNoteGroup').hidden = mode === 'add';
+    document.getElementById('finNote').placeholder = mode === 'withdraw' ? 'Reason' : 'Note';
+    document.getElementById('finToGroup').hidden = mode !== 'transfer';
+    document.getElementById('finAccountLabel').textContent = { add: 'Account', withdraw: 'Account (deduct from)', transfer: 'Transfer from' }[mode];
+    document.getElementById('financeModal').classList.add('active');
+    setTimeout(() => document.getElementById('finAmount').focus(), 120);
+}
+
+function saveFinance() {
+    if (!requireSubscription()) return;
+    const account = document.getElementById('finAccount').value;
+    const to = document.getElementById('finTo').value;
+    const amount = round2(parseFloat(document.getElementById('finAmount').value));
+    const note = financeMode === 'add' ? '' : document.getElementById('finNote').value.trim();
+
+    if (!(amount > 0)) {
+        showNotification('Enter an amount greater than zero', 'error');
+        return;
+    }
+
+    // Picked date with the current time, so entries keep their order within a day
+    const picked = document.getElementById('finDate').value;
+    const when = picked ? new Date(picked + 'T' + new Date().toTimeString().slice(0, 8)) : new Date();
+    const now = (isNaN(when) ? new Date() : when).toISOString();
+    const pair = newRecordId();
+
+    if (financeMode === 'add') {
+        inventory.accounts[account] = round2(inventory.accounts[account] + amount);
+        inventory.finance.push({ id: pair, date: now, kind: 'add', account, amount, note });
+    } else if (financeMode === 'withdraw') {
+        if (inventory.accounts[account] < amount) {
+            showNotification(`Not enough ${accountLabel(account)} balance`, 'error');
+            return;
+        }
+        inventory.accounts[account] = round2(inventory.accounts[account] - amount);
+        inventory.finance.push({ id: pair, date: now, kind: 'withdraw', account, amount, note });
+    } else {
+        if (account === to) {
+            showNotification('Pick two different accounts', 'error');
+            return;
+        }
+        if (inventory.accounts[account] < amount) {
+            showNotification(`Not enough ${accountLabel(account)} balance`, 'error');
+            return;
+        }
+        inventory.accounts[account] = round2(inventory.accounts[account] - amount);
+        inventory.accounts[to] = round2(inventory.accounts[to] + amount);
+        inventory.finance.push(
+            { id: pair, pair, date: now, kind: 'send', account, counterparty: to, amount, note },
+            { id: pair + 1, pair, date: now, kind: 'receive', account: to, counterparty: account, amount, note }
+        );
+    }
+
+    if (!saveToLocalStorage()) {
+        loadFromLocalStorage();
+        showNotification('Could not save: your device storage is full', 'error');
+    } else {
+        showNotification('Saved', 'success');
+    }
+    closeModal('financeModal');
     updateAllBalances();
+    if (currentPage === 'inventory') updateInventoryPage();
+}
+
+// Delete an entry (a transfer removes both of its sides) and undo its effect on the balances
+function deleteFinance(id) {
+    if (!requireSubscription()) return;
+    const entry = inventory.finance.find(f => f.id === id);
+    if (!entry) return;
+    if (!confirm('Delete this entry? The balances will be reversed.')) return;
+
+    const group = entry.pair ? inventory.finance.filter(f => f.pair === entry.pair) : [entry];
+    const after = { ...inventory.accounts };
+    group.forEach(f => {
+        const positive = f.kind === 'add' || f.kind === 'receive';
+        after[f.account] += positive ? -f.amount : f.amount;
+    });
+    if (Object.values(after).some(v => v < -0.005)) {
+        showNotification('Cannot delete: it would make a balance negative', 'error');
+        return;
+    }
+
+    ACCOUNTS.forEach(a => { inventory.accounts[a.id] = round2(after[a.id]); });
+    inventory.finance = inventory.finance.filter(f => !group.includes(f));
+    saveToLocalStorage();
+    showNotification('Entry deleted', 'success');
+    updateAllBalances();
+    updateInventoryPage();
 }
 
 // ===================================
@@ -1169,9 +1223,6 @@ function generateReport(silent = false) {
     // Generate cash flow summary
     generateCashFlowSummary(cashIn, cashOut, totalCashIn, totalCashOut);
     
-    // Generate top customers
-    generateTopCustomers(transactions);
-    
     // Generate fee breakdown
     generateFeeBreakdown(transactions);
     
@@ -1261,50 +1312,6 @@ function generateCashFlowSummary(cashIn, cashOut, totalCashIn, totalCashOut) {
             </div>
         </div>
     `;
-}
-
-function generateTopCustomers(transactions) {
-    const div = document.getElementById('topCustomers');
-    if (!div) return;
-
-    // Group by customer
-    const customerStats = {};
-    transactions.forEach(t => {
-        if (!customerStats[t.customer]) {
-            customerStats[t.customer] = { count: 0, total: 0 };
-        }
-        customerStats[t.customer].count++;
-        customerStats[t.customer].total += t.amount;
-    });
-
-    // Convert to array and sort
-    const topCustomers = Object.entries(customerStats)
-        .map(([name, stats]) => ({ name, ...stats }))
-        .sort((a, b) => b.total - a.total)
-        .slice(0, 5);
-
-    if (topCustomers.length === 0) {
-        div.innerHTML = reportEmpty('users', 'No customer data yet');
-        return;
-    }
-
-    const maxTotal = topCustomers[0].total || 1;
-
-    div.innerHTML = topCustomers.map((customer, index) => `
-        <div class="rank-row">
-            <div class="rank-row-top">
-                <span class="rank-badge rank-${index + 1}">${index + 1}</span>
-                <div class="rank-info">
-                    <div class="rank-name">${escapeHtml(customer.name)}</div>
-                    <div class="rank-sub">${customer.count} transactions</div>
-                </div>
-                <strong class="rank-total">${peso(customer.total)}</strong>
-            </div>
-            <div class="progress-bar-container">
-                <div class="progress-bar" style="width: ${(customer.total / maxTotal) * 100}%"></div>
-            </div>
-        </div>
-    `).join('');
 }
 
 function generateFeeBreakdown(transactions) {
@@ -1398,10 +1405,6 @@ function exportCashFlowReport() {
     showNotification('Exporting cash flow report...', 'info');
 }
 
-function exportCustomerReport() {
-    showNotification('Exporting customer report...', 'info');
-}
-
 function generateDailyReport() {
     navigateToPage('reports');
     const today = localDateString(new Date());
@@ -1415,40 +1418,6 @@ function generateDailyReport() {
 // ===================================
 // SETTINGS
 // ===================================
-
-function loadSettings() {
-    document.getElementById('cashInFee1').value = inventory.settings.cashInFees.tier1;
-    document.getElementById('cashInFee2').value = inventory.settings.cashInFees.tier2;
-    document.getElementById('cashInFee3').value = inventory.settings.cashInFees.tier3;
-    document.getElementById('cashOutFee1').value = inventory.settings.cashOutFees.tier1;
-    document.getElementById('cashOutFee2').value = inventory.settings.cashOutFees.tier2;
-    document.getElementById('cashOutFee3').value = inventory.settings.cashOutFees.tier3;
-    document.getElementById('businessName').value = inventory.settings.businessName || '';
-    document.getElementById('businessPhone').value = inventory.settings.businessPhone || '';
-    document.getElementById('gcashNumber').value = inventory.settings.gcashNumber || '';
-}
-
-function saveFeeSettings() {
-    inventory.settings.cashInFees.tier1 = parseFloat(document.getElementById('cashInFee1').value);
-    inventory.settings.cashInFees.tier2 = parseFloat(document.getElementById('cashInFee2').value);
-    inventory.settings.cashInFees.tier3 = parseFloat(document.getElementById('cashInFee3').value);
-    inventory.settings.cashOutFees.tier1 = parseFloat(document.getElementById('cashOutFee1').value);
-    inventory.settings.cashOutFees.tier2 = parseFloat(document.getElementById('cashOutFee2').value);
-    inventory.settings.cashOutFees.tier3 = parseFloat(document.getElementById('cashOutFee3').value);
-    
-    saveToLocalStorage();
-    showNotification('Fee settings saved successfully!', 'success');
-}
-
-function saveBusinessInfo() {
-    inventory.settings.businessName = document.getElementById('businessName').value.trim();
-    inventory.settings.businessPhone = document.getElementById('businessPhone').value.trim();
-    inventory.settings.gcashNumber = document.getElementById('gcashNumber').value.trim();
-
-    saveToLocalStorage();
-    updateBusinessName();
-    showNotification('Business information saved successfully!', 'success');
-}
 
 function exportData() {
     const dataStr = JSON.stringify(inventory, null, 2);
@@ -1468,15 +1437,26 @@ function importData() {
     input.accept = 'application/json';
     input.onchange = function(e) {
         const file = e.target.files[0];
+        if (!file) return;
         const reader = new FileReader();
+        reader.onerror = () => showNotification('Could not read that file', 'error');
         reader.onload = function(event) {
             try {
                 const data = JSON.parse(event.target.result);
+                const looksValid = data && typeof data === 'object' && !Array.isArray(data) &&
+                    (Array.isArray(data.transactions) || Array.isArray(data.finance) || 'accounts' in data ||
+                     'cash' in data || 'gcash' in data);
+                if (!looksValid) {
+                    showNotification('That file is not a CashG backup', 'error');
+                    return;
+                }
+                const count = Array.isArray(data.transactions) ? data.transactions.length : 0;
+                if (!confirm(`Replace your current data with this backup (${count} transactions)? This cannot be undone.`)) return;
                 inventory = normalizeInventory(data);
                 saveToLocalStorage();
                 closeModal('welcomeModal');
                 showNotification('Data imported successfully!', 'success');
-                updateDashboard();
+                loadTransactions();
                 updateAllBalances();
                 updateBusinessName();
                 navigateToPage(currentPage);
@@ -1489,6 +1469,99 @@ function importData() {
     input.click();
 }
 
+// Profile photo: shrunk to a small square and kept on this device
+function avatarKey() {
+    return 'cashg-avatar-' + ((typeof currentUser !== 'undefined' && currentUser?.id) || 'local');
+}
+
+function getAvatar() {
+    try { return localStorage.getItem(avatarKey()) || ''; } catch { return ''; }
+}
+
+function renderAvatar() {
+    const src = getAvatar();
+    const img = document.getElementById('menuAvatarImg');
+    img.src = src;
+    img.hidden = !src;
+    document.getElementById('menuAvatarIcon').style.display = src ? 'none' : '';
+    document.getElementById('menuRemovePhoto').hidden = !src;
+}
+
+function squareAvatar(file) {
+    return new Promise((resolve, reject) => {
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload = () => {
+            const size = 240;
+            const side = Math.min(img.width, img.height);
+            const canvas = document.createElement('canvas');
+            canvas.width = canvas.height = size;
+            canvas.getContext('2d').drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, size, size);
+            URL.revokeObjectURL(url);
+            resolve(canvas.toDataURL('image/jpeg', 0.82));
+        };
+        img.onerror = () => {
+            URL.revokeObjectURL(url);
+            reject(new Error('Not an image'));
+        };
+        img.src = url;
+    });
+}
+
+async function handleAvatarFile(input) {
+    const file = input.files && input.files[0];
+    input.value = '';
+    if (!file) return;
+    try {
+        localStorage.setItem(avatarKey(), await squareAvatar(file));
+        renderAvatar();
+        showNotification('Profile photo updated', 'success');
+    } catch {
+        showNotification('Could not use that photo', 'error');
+    }
+}
+
+function removeAvatar() {
+    try { localStorage.removeItem(avatarKey()); } catch { /* private mode */ }
+    renderAvatar();
+}
+
+// Header menu: owner details, Subscription and Reset data
+function openMenuModal() {
+    const profile = (typeof account !== 'undefined' && account?.profile) || {};
+    const email = (typeof currentUser !== 'undefined' && currentUser?.email) || '';
+    const business = inventory.settings.businessName || profile.business_name || '';
+    const set = (id, text) => { document.getElementById(id).textContent = text || '—'; };
+    set('menuOwnerName', profile.full_name || business || 'Owner');
+    document.getElementById('menuBusiness').textContent = profile.full_name && business ? business : '';
+    set('menuEmail', email);
+    set('menuPhone', profile.phone);
+    set('menuBusinessName', business);
+    let plan = '';
+    try {
+        const sub = getSubscriptionState();
+        const name = sub.plan ? sub.plan.charAt(0).toUpperCase() + sub.plan.slice(1) : '';
+        if (sub.status === 'active') plan = `${name} · ${sub.daysLeft} days left`;
+        else if (sub.status === 'expiring') plan = `${name} · ends in ${sub.daysLeft} day${sub.daysLeft === 1 ? '' : 's'}`;
+        else if (sub.status === 'expired') plan = 'Expired';
+        else plan = 'No plan yet';
+    } catch { /* not signed in */ }
+    set('menuPlan', plan);
+    renderAvatar();
+    setSidebarOpen(false);
+    document.getElementById('menuModal').classList.add('active');
+}
+
+function menuGoTo(page) {
+    closeModal('menuModal');
+    navigateToPage(page);
+}
+
+function menuResetData() {
+    closeModal('menuModal');
+    clearAllData();
+}
+
 function clearAllData() {
     if (!confirm('Are you sure you want to clear all data? This cannot be undone!')) return;
     
@@ -1497,7 +1570,7 @@ function clearAllData() {
     if (key) localStorage.removeItem(key);
 
     showNotification('All data cleared', 'success');
-    updateDashboard();
+    loadTransactions();
     updateAllBalances();
     updateBusinessName();
     navigateToPage('dashboard');
@@ -1525,9 +1598,16 @@ function setInstallButtonsVisible(visible) {
 
 function initializePWA() {
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
-        navigator.serviceWorker.register('sw.js').catch(error => {
-            console.warn('Service worker registration failed', error);
-        });
+        // On a local dev server skip the offline cache so edits show up straight away
+        const localDev = ['localhost', '127.0.0.1'].includes(location.hostname);
+        if (localDev) {
+            navigator.serviceWorker.getRegistrations().then(list => list.forEach(r => r.unregister()));
+            if (window.caches) caches.keys().then(keys => keys.forEach(k => caches.delete(k)));
+        } else {
+            navigator.serviceWorker.register('sw.js').catch(error => {
+                console.warn('Service worker registration failed', error);
+            });
+        }
     }
 
     // Ask the browser not to auto-delete this device's data
@@ -1609,25 +1689,21 @@ function closeModal(modalId) {
 // ===================================
 
 function updateAllBalances() {
-    const values = {
-        cashOnHand: inventory.cash,
-        gcashBalance: inventory.gcash,
-        heroCash: inventory.cash,
-        heroGcash: inventory.gcash,
-        heroTotal: inventory.cash + inventory.gcash
-    };
-    Object.entries(values).forEach(([id, value]) => {
-        const el = document.getElementById(id);
-        if (el) el.textContent = value.toLocaleString();
-    });
+    const set = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
+    set('ttCash', pesoFull(inventory.accounts.cash));
+    set('ttDigital', pesoFull(digitalTotal()));
+    if (currentPage === 'inventory') updateInventoryPage();
 }
 
-function setCurrentDate() {
-    const dateElement = document.getElementById('currentDate');
-    if (dateElement) {
-        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-        dateElement.textContent = new Date().toLocaleDateString('en-US', options);
-    }
+function getTimeAgo(date) {
+    const seconds = Math.floor((new Date() - date) / 1000);
+
+    if (seconds < 60) return 'Just now';
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+    if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
+
+    return date.toLocaleDateString();
 }
 
 function formatDate(dateString) {

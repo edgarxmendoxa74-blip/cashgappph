@@ -1,7 +1,7 @@
 // =====================================================================
 // CashG — Admin Dashboard
 //
-// Create login accounts, review payment proofs, and monitor monthly /
+// Create login accounts, review payment proofs, and monitor yearly
 // yearly subscriptions. Talks to the same Supabase project as the app.
 // Every table is protected by row-level security: only accounts with
 // role = 'admin' in `profiles` can see other users' data.
@@ -20,7 +20,7 @@ const sb = hasConfig && window.supabase
 
 const DAY_MS = 86400000;
 const EXPIRING_DAYS = 7;
-const PLAN_LABELS = { monthly: 'Monthly', yearly: 'Yearly', trial: 'Trial' };
+const PLAN_LABELS = new Proxy({ yearly: 'Yearly', trial: 'Trial' }, { get: (labels, plan) => labels[plan] ?? 'Plan' });
 const METHOD_LABELS = { gcash: 'GCash', bank: 'Bank Transfer' };
 const VIEW_TITLES = {
     overview: 'Overview',
@@ -404,7 +404,6 @@ function renderOverview() {
     const users = state.profiles.filter(p => p.role !== 'admin');
     const access = users.map(p => ({ profile: p, ...accessFor(p) }));
     const activeCount = access.filter(a => a.status === 'active' || a.status === 'expiring').length;
-    const monthlyActive = access.filter(a => a.plan === 'monthly').length;
     const yearlyActive = access.filter(a => a.plan === 'yearly').length;
     const pending = state.requests.filter(r => r.status === 'pending');
     const now = new Date();
@@ -413,7 +412,7 @@ function renderOverview() {
 
     $('overviewStats').innerHTML =
         statCard('Accounts', users.length, `${access.filter(a => a.status === 'none').length} without a plan`) +
-        statCard('Active subscriptions', activeCount, `${monthlyActive} monthly · ${yearlyActive} yearly`, 'tone-green') +
+        statCard('Active subscriptions', activeCount, `${yearlyActive} yearly`, 'tone-green') +
         statCard('Payments to review', pending.length, pending.length ? 'Waiting for approval' : 'All caught up', pending.length ? 'tone-amber' : '') +
         statCard('Revenue this month', peso(revenueSince(monthStart)), `${peso(revenueSince(yearStart))} this year`);
 
@@ -478,7 +477,6 @@ function renderSubscriptions() {
     const yearStart = new Date(now.getFullYear(), 0, 1);
 
     $('subscriptionStats').innerHTML =
-        statCard('Monthly (current)', current.filter(s => s.plan === 'monthly').length, `${peso(state.settings?.monthly_price)} / month`, 'tone-green') +
         statCard('Yearly (current)', current.filter(s => s.plan === 'yearly').length, `${peso(state.settings?.yearly_price)} / year`, 'tone-green') +
         statCard('Revenue this month', peso(revenueSince(monthStart))) +
         statCard('Revenue this year', peso(revenueSince(yearStart)));
@@ -634,7 +632,6 @@ async function deleteAnnouncement(id) {
 
 function renderSettings() {
     const s = state.settings || {};
-    $('setMonthly').value = s.monthly_price ?? '';
     $('setYearly').value = s.yearly_price ?? '';
     $('setPayName').value = s.payment_gcash_name || '';
     $('setPayNumber').value = s.payment_gcash_number || '';
@@ -698,7 +695,6 @@ function openNewAccount() {
                     <option value="none">No plan yet (user pays in the app)</option>
                     <option value="trial7">Free trial · 7 days</option>
                     <option value="trial14">Free trial · 14 days</option>
-                    <option value="monthly">Monthly (already paid)</option>
                     <option value="yearly">Yearly (already paid)</option>
                 </select>
             </label>
@@ -717,9 +713,9 @@ function openNewAccount() {
     const form = $('newAccountForm');
     $('regenPassword').onclick = () => { form.elements.password.value = generatePassword(); };
     form.elements.access.onchange = () => {
-        const paid = ['monthly', 'yearly'].includes(form.elements.access.value);
+        const paid = form.elements.access.value === 'yearly';
         $('paidAmountField').hidden = !paid;
-        if (paid) form.elements.amount.value = form.elements.access.value === 'monthly' ? state.settings?.monthly_price : state.settings?.yearly_price;
+        if (paid) form.elements.amount.value = state.settings?.yearly_price;
     };
     form.onsubmit = submitNewAccount;
 }
@@ -752,7 +748,6 @@ async function submitNewAccount(event) {
         const grants = {
             trial7: { plan: 'trial', days: 7, amount: 0 },
             trial14: { plan: 'trial', days: 14, amount: 0 },
-            monthly: { plan: 'monthly', days: null, amount: Number(f.amount) || 0 },
             yearly: { plan: 'yearly', days: null, amount: Number(f.amount) || 0 }
         };
         const grant = grants[f.access];
@@ -816,7 +811,6 @@ function openAccount(userId) {
         <h3 class="section-h">Give access</h3>
         <form class="inline-form" id="grantForm">
             <select name="plan">
-                <option value="monthly">+1 month</option>
                 <option value="yearly">+1 year</option>
                 <option value="trial7">+7 days (free)</option>
             </select>
@@ -988,7 +982,7 @@ async function openPayment(requestId) {
                     <button type="button" class="btn btn-ghost btn-danger-ghost" id="rejectBtn"><span class="spinner"></span>${icon('x')}<span>Reject</span></button>
                     <button type="button" class="btn btn-primary" id="approveBtn"><span class="spinner"></span>${icon('check')}<span>Approve · ${PLAN_LABELS[r.plan]}</span></button>
                 </div>
-                <p class="muted small">Approving adds ${r.plan === 'monthly' ? '1 month' : '1 year'} starting after their current plan ends, and notifies the user.</p>` : ''}
+                <p class="muted small">Approving adds 1 year starting after their current plan ends, and notifies the user.</p>` : ''}
             </div>
         </div>
     `, { wide: true });
@@ -1044,14 +1038,12 @@ async function reviewPayment(r, action) {
 async function saveSettings(event) {
     event.preventDefault();
     const button = $('settingsSave');
-    const monthly = Number($('setMonthly').value);
     const yearly = Number($('setYearly').value);
-    if (!(monthly >= 0) || !(yearly >= 0)) return toast('Enter valid prices.', 'error');
+    if (!(yearly >= 0)) return toast('Enter a valid price.', 'error');
 
     setBusy(button, true);
     try {
         unwrap(await sb.from('app_settings').update({
-            monthly_price: monthly,
             yearly_price: yearly,
             payment_gcash_name: $('setPayName').value.trim(),
             payment_gcash_number: $('setPayNumber').value.trim(),

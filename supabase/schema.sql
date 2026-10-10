@@ -27,7 +27,6 @@ create table if not exists public.profiles (
 -- Prices and payment details shown in the app (single row, id = 1)
 create table if not exists public.app_settings (
     id                   int primary key default 1 check (id = 1),
-    monthly_price        numeric(10, 2) not null default 199,
     yearly_price         numeric(10, 2) not null default 1999,
     payment_gcash_name   text not null default '',
     payment_gcash_number text not null default '',
@@ -41,7 +40,7 @@ insert into public.app_settings (id) values (1) on conflict (id) do nothing;
 create table if not exists public.subscription_requests (
     id                uuid primary key default gen_random_uuid(),
     user_id           uuid not null references public.profiles (id) on delete cascade,
-    plan              text not null check (plan in ('monthly', 'yearly')),
+    plan              text not null check (plan = 'yearly'),
     amount            numeric(10, 2) not null default 0,
     full_name         text not null,
     phone             text not null,
@@ -68,7 +67,7 @@ create index if not exists subscription_requests_created_idx
 create table if not exists public.subscriptions (
     id         uuid primary key default gen_random_uuid(),
     user_id    uuid not null references public.profiles (id) on delete cascade,
-    plan       text not null check (plan in ('monthly', 'yearly', 'trial')),
+    plan       text not null check (plan in ('yearly', 'trial')),
     amount     numeric(10, 2) not null default 0,
     starts_at  timestamptz not null,
     ends_at    timestamptz not null,
@@ -118,7 +117,6 @@ language sql
 immutable
 as $$
     select case p_plan
-        when 'monthly' then interval '1 month'
         when 'yearly'  then interval '1 year'
         else make_interval(days => coalesce(p_days, 7))
     end;
@@ -130,7 +128,6 @@ language sql
 immutable
 as $$
     select case p_plan
-        when 'monthly' then 'Monthly'
         when 'yearly'  then 'Yearly'
         else 'Trial'
     end;
@@ -173,7 +170,7 @@ declare
     s public.app_settings;
 begin
     select * into s from public.app_settings where id = 1;
-    new.amount      := case new.plan when 'monthly' then s.monthly_price else s.yearly_price end;
+    new.amount      := s.yearly_price;
     new.email       := (select email from public.profiles where id = new.user_id);
     new.status      := 'pending';
     new.admin_note  := null;
@@ -310,7 +307,7 @@ begin
     if not public.is_admin() then
         raise exception 'Only admins can grant subscriptions';
     end if;
-    if p_plan not in ('monthly', 'yearly', 'trial') then
+    if p_plan not in ('yearly', 'trial') then
         raise exception 'Unknown plan %', p_plan;
     end if;
 

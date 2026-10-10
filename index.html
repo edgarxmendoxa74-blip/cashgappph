@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#03955f">
-    <meta name="description" content="CashG Inventory App — track Cash In / Cash Out, customers and balances. Works offline.">
+    <meta name="description" content="CashG Inventory App — track Cash In / Cash Out and balances. Works offline.">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -14,10 +14,10 @@
     <link rel="icon" type="image/png" href="icons/favicon-64.png">
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="tracker.css">
+    <link rel="stylesheet" href="ios.css">
+    <script>try{document.documentElement.dataset.theme='light'}catch(e){}</script>
 </head>
 <body data-page="dashboard">
     <!-- Icon sprite (Lucide icons, ISC license) -->
@@ -28,6 +28,11 @@
         <symbol id="i-wallet" viewBox="0 0 24 24"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></symbol>
         <symbol id="i-chart" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></symbol>
         <symbol id="i-settings" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></symbol>
+        <symbol id="i-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></symbol>
+        <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+        <symbol id="i-percent" viewBox="0 0 24 24"><path d="M19 5L5 19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></symbol>
+        <symbol id="i-dots" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></symbol>
+        <symbol id="i-camera" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></symbol>
         <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/></symbol>
         <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
         <symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></symbol>
@@ -87,7 +92,6 @@
                 <ul class="auth-features">
                     <li><span><svg class="icon"><use href="#i-wallet"/></svg></span>Live cash and GCash balances</li>
                     <li><span><svg class="icon"><use href="#i-chart"/></svg></span>Daily reports and profit tracking</li>
-                    <li><span><svg class="icon"><use href="#i-users"/></svg></span>Customer list for faster transactions</li>
                 </ul>
             </div>
         </section>
@@ -161,30 +165,6 @@
         </div>
 
         <ul class="sidebar-menu">
-            <li class="menu-item active">
-                <a href="#dashboard" data-page="dashboard">
-                    <svg class="icon"><use href="#i-home"/></svg>
-                    <span>Inventory</span>
-                </a>
-            </li>
-            <li class="menu-item">
-                <a href="#transactions" data-page="transactions">
-                    <svg class="icon"><use href="#i-transfer"/></svg>
-                    <span>Transactions</span>
-                </a>
-            </li>
-            <li class="menu-item">
-                <a href="#customers" data-page="customers">
-                    <svg class="icon"><use href="#i-users"/></svg>
-                    <span>Customers</span>
-                </a>
-            </li>
-            <li class="menu-item">
-                <a href="#inventory" data-page="inventory">
-                    <svg class="icon"><use href="#i-wallet"/></svg>
-                    <span>Balances</span>
-                </a>
-            </li>
             <li class="menu-item">
                 <a href="#reports" data-page="reports">
                     <svg class="icon"><use href="#i-chart"/></svg>
@@ -221,24 +201,15 @@
 
     <!-- Main Content -->
     <main class="main-content">
-        <header class="top-header">
-            <div class="header-left">
-                <h1 id="pageTitle">Inventory</h1>
-                <p class="current-date" id="currentDate"></p>
+        <header class="tt-header">
+            <div class="tt-brand">
+                <img class="tt-logo" src="icons/logo-mark.png" alt="CashG">
+                <span class="tt-brand-text">
+                    <span class="tt-brand-name">Cash<span>G</span></span>
+                    <span class="tt-brand-sub">Inventory</span>
+                </span>
             </div>
-            <div class="header-right">
-                <div class="quick-stats">
-                    <div class="stat-item stat-cash">
-                        <span class="stat-item-icon"><svg class="icon"><use href="#i-cash"/></svg></span>
-                        <span class="stat-item-text"><small>Cash</small><span class="stat-item-value">₱<span id="cashOnHand">0</span></span></span>
-                    </div>
-                    <div class="stat-item stat-gcash">
-                        <span class="stat-item-icon"><svg class="icon"><use href="#i-phone-device"/></svg></span>
-                        <span class="stat-item-text"><small>GCash</small><span class="stat-item-value">₱<span id="gcashBalance">0</span></span></span>
-                    </div>
-                </div>
-            </div>
-            <div class="header-actions">
+            <div class="tt-actions">
                 <span class="net-pill" id="netPill" role="status" hidden>
                     <svg class="icon"><use href="#i-wifi-off"/></svg>
                     <span>Offline</span>
@@ -247,261 +218,126 @@
                     <svg class="icon"><use href="#i-bell"/></svg>
                     <span class="bell-badge" id="notifBadge" hidden>0</span>
                 </button>
+                <button type="button" class="header-menu" id="menuBtn" onclick="openMenuModal()" aria-label="Menu" aria-haspopup="dialog">
+                    <svg class="icon"><use href="#i-menu"/></svg>
+                </button>
             </div>
         </header>
 
         <!-- Subscription status banner (filled by account.js) -->
         <div class="sub-banner" id="subBanner" role="status" hidden></div>
 
-        <!-- Dashboard Page -->
+        <!-- Trans Page -->
         <div class="page-content" id="dashboard-page">
-            <div class="dashboard-grid">
-                <!-- Balance Hero -->
-                <section class="balance-hero">
-                    <div class="balance-hero-top">
-                        <span class="balance-hero-label">Total Balance</span>
-                        <button class="balance-hero-link" onclick="navigateToPage('inventory')">
-                            Manage <svg class="icon"><use href="#i-chevron"/></svg>
-                        </button>
-                    </div>
-                    <div class="balance-hero-amount">₱<span id="heroTotal">0</span></div>
-                    <div class="balance-hero-split">
-                        <div>
-                            <span class="balance-hero-sublabel"><svg class="icon"><use href="#i-cash"/></svg> Cash on Hand</span>
-                            <strong>₱<span id="heroCash">0</span></strong>
-                        </div>
-                        <div>
-                            <span class="balance-hero-sublabel"><svg class="icon"><use href="#i-phone-device"/></svg> GCash Wallet</span>
-                            <strong>₱<span id="heroGcash">0</span></strong>
-                        </div>
-                    </div>
-                </section>
+            <section class="tt-hero tt-hero-orange">
+                <div class="tt-hero-label"><svg class="icon"><use href="#i-coins"/></svg> <span>Total revenue</span></div>
+                <div class="tt-hero-value" id="ttRevenue">₱0.00</div>
+            </section>
 
-                <!-- Quick Actions -->
-                <section class="quick-actions">
-                    <div class="action-buttons">
-                        <button class="action-btn cash-in-btn" onclick="openTransactionModal('cashin')">
-                            <span class="action-icon"><svg class="icon"><use href="#i-in"/></svg></span>
-                            <span>Cash In</span>
-                        </button>
-                        <button class="action-btn cash-out-btn" onclick="openTransactionModal('cashout')">
-                            <span class="action-icon"><svg class="icon"><use href="#i-out"/></svg></span>
-                            <span>Cash Out</span>
-                        </button>
-                        <button class="action-btn customer-btn" onclick="openCustomerModal()">
-                            <span class="action-icon"><svg class="icon"><use href="#i-user-plus"/></svg></span>
-                            <span>Customer</span>
-                        </button>
-                        <button class="action-btn report-btn" onclick="generateDailyReport()">
-                            <span class="action-icon"><svg class="icon"><use href="#i-chart"/></svg></span>
-                            <span>Report</span>
-                        </button>
-                    </div>
-                </section>
-
-                <!-- Today's Summary -->
-                <section>
-                    <h3 class="section-title">Today</h3>
-                    <div class="summary-cards">
-                        <div class="summary-card cash-in">
-                            <div class="card-head">
-                                <span class="card-icon"><svg class="icon"><use href="#i-in"/></svg></span>
-                                <h3>Cash In</h3>
-                            </div>
-                            <div class="amount">₱<span id="todayCashIn">0</span></div>
-                            <div class="count"><span id="todayCashInCount">0</span> transactions</div>
-                        </div>
-
-                        <div class="summary-card cash-out">
-                            <div class="card-head">
-                                <span class="card-icon"><svg class="icon"><use href="#i-out"/></svg></span>
-                                <h3>Cash Out</h3>
-                            </div>
-                            <div class="amount">₱<span id="todayCashOut">0</span></div>
-                            <div class="count"><span id="todayCashOutCount">0</span> transactions</div>
-                        </div>
-
-                        <div class="summary-card profit">
-                            <div class="card-head">
-                                <span class="card-icon"><svg class="icon"><use href="#i-trending"/></svg></span>
-                                <h3>Profit</h3>
-                            </div>
-                            <div class="amount">₱<span id="todayProfit">0</span></div>
-                            <div class="count">From fees collected</div>
-                        </div>
-
-                        <div class="summary-card customers">
-                            <div class="card-head">
-                                <span class="card-icon"><svg class="icon"><use href="#i-users"/></svg></span>
-                                <h3>Customers</h3>
-                            </div>
-                            <div class="amount"><span id="activeCustomers">0</span></div>
-                            <div class="count">Active this month</div>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Recent Transactions -->
-                <section class="recent-transactions">
-                    <div class="section-header">
-                        <h3>Recent Transactions</h3>
-                        <button class="view-all-btn" onclick="navigateToPage('transactions')">
-                            View All <svg class="icon"><use href="#i-chevron"/></svg>
-                        </button>
-                    </div>
-                    <div class="transactions-list" id="recentTransactionsList">
-                        <!-- Transactions will be populated by JavaScript -->
-                    </div>
-                </section>
-            </div>
-        </div>
-
-        <!-- Transactions Page -->
-        <div class="page-content" id="transactions-page" style="display: none;">
-            <div class="page-header">
-                <div class="header-left">
-                    <h2>Transactions</h2>
-                    <p class="page-subtitle">All your Cash In and Cash Out records</p>
+            <div class="tt-pair">
+                <div class="tt-stat tt-stat-green">
+                    <small>Cash balance</small>
+                    <strong id="ttCash">₱0.00</strong>
                 </div>
-                <div class="header-right">
-                    <div class="filter-controls">
-                        <select id="transactionFilter" aria-label="Filter by type">
-                            <option value="all">All types</option>
-                            <option value="cashin">Cash In</option>
-                            <option value="cashout">Cash Out</option>
-                        </select>
-                        <input type="date" id="dateFilter" aria-label="Filter by date" />
-                        <button class="btn btn-primary" onclick="openTransactionModal()">
-                            <svg class="icon"><use href="#i-plus"/></svg> New Transaction
-                        </button>
-                    </div>
+                <div class="tt-stat tt-stat-blue">
+                    <small>Non-cash balance</small>
+                    <strong id="ttDigital">₱0.00</strong>
                 </div>
             </div>
 
-            <div class="data-table-container">
-                <table class="data-table" id="transactionsTable">
+            <div class="tt-pair tt-pair-flat">
+                <div class="tt-flow"><small>Cash in</small><strong id="ttCashIn">₱0.00</strong></div>
+                <div class="tt-flow"><small>Cash out</small><strong id="ttCashOut">₱0.00</strong></div>
+            </div>
+
+            <div class="tt-filters">
+                <div class="tt-chips" role="group" aria-label="Filter by date">
+                    <button type="button" class="tt-chip active" data-range="all" onclick="setTransactionRange('all')">All</button>
+                    <button type="button" class="tt-chip" data-range="today" onclick="setTransactionRange('today')">Today</button>
+                    <button type="button" class="tt-chip" data-range="month" onclick="setTransactionRange('month')">This month</button>
+                </div>
+                <button type="button" class="tt-date-btn" id="ttDateBtn" onclick="openCalendar()" aria-label="Pick a date">
+                    <svg class="icon"><use href="#i-calendar"/></svg>
+                </button>
+                <button type="button" class="tt-export" onclick="exportTransactionsCsv()" aria-label="Export CSV" title="Export CSV">
+                    <svg class="icon"><use href="#i-download"/></svg>
+                </button>
+            </div>
+
+            <div class="tt-section-head">
+                <h3>Transactions</h3>
+                <span class="tt-count" id="ttCount">0</span>
+            </div>
+            <div class="tt-card tt-table-card">
+                <table class="tt-table" id="transactionsTable">
                     <thead>
-                        <tr>
-                            <th>Date/Time</th>
-                            <th>Type</th>
-                            <th>Customer</th>
-                            <th>Amount</th>
-                            <th>Fee</th>
-                            <th>Total</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
+                        <tr><th>Date</th><th>Acct</th><th>Type</th><th class="tt-r">Amount</th><th></th></tr>
                     </thead>
-                    <tbody id="transactionsTableBody">
-                        <!-- Transactions will be populated by JavaScript -->
-                    </tbody>
+                    <tbody id="transactionsTableBody"></tbody>
                 </table>
+                <div class="tt-empty" id="ttEmpty" hidden>
+                    <svg class="icon"><use href="#i-receipt"/></svg>
+                    <span>No transactions yet</span>
+                </div>
             </div>
         </div>
 
-        <!-- Customers Page -->
-        <div class="page-content" id="customers-page" style="display: none;">
-            <div class="page-header">
-                <div class="header-left">
-                    <h2>Customers</h2>
-                    <p class="page-subtitle"><span id="customerCount">0</span> saved customers</p>
-                </div>
-                <div class="header-right">
-                    <div class="search-controls">
-                        <label class="search-field">
-                            <svg class="icon"><use href="#i-search"/></svg>
-                            <input type="text" id="customerSearch" placeholder="Search name, number, notes..." aria-label="Search customers" />
-                        </label>
-                        <button class="btn btn-primary" onclick="openCustomerModal()">
-                            <svg class="icon"><use href="#i-user-plus"/></svg> Add Customer
-                        </button>
-                    </div>
-                </div>
+        <!-- Rates Page -->
+        <div class="page-content" id="rates-page" style="display: none;">
+            <div class="tt-section-head">
+                <h3>Fee rates</h3>
+                <span class="tt-count" id="rateCount">0</span>
             </div>
-
-            <div class="data-table-container">
-                <table class="data-table excel-table" id="customersTable">
+                        <div class="tt-card tt-table-card">
+                <table class="tt-table">
                     <thead>
-                        <tr>
-                            <th onclick="sortCustomers('id')" style="cursor: pointer; user-select: none;">
-                                # <span class="sort-indicator">⇅</span>
-                            </th>
-                            <th onclick="sortCustomers('name')" style="cursor: pointer; user-select: none;">
-                                Name <span class="sort-indicator">⇅</span>
-                            </th>
-                            <th onclick="sortCustomers('phone')" style="cursor: pointer; user-select: none;">
-                                Phone Number <span class="sort-indicator">⇅</span>
-                            </th>
-                            <th onclick="sortCustomers('gcash')" style="cursor: pointer; user-select: none;">
-                                GCash Number <span class="sort-indicator">⇅</span>
-                            </th>
-                            <th>Notes</th>
-                            <th style="text-align: center;">Actions</th>
-                        </tr>
+                        <tr><th>Range</th><th class="tt-r">Cash in</th><th class="tt-r">Cash out</th><th></th></tr>
                     </thead>
-                    <tbody id="customersTableBody">
-                        <!-- Customers will be populated by JavaScript -->
-                    </tbody>
+                    <tbody id="ratesTableBody"></tbody>
                 </table>
+                <div class="tt-empty" id="ratesEmpty" hidden>
+                    <svg class="icon"><use href="#i-percent"/></svg>
+                    <span>No rates yet. Fees will be ₱0.</span>
+                </div>
             </div>
         </div>
 
-        <!-- Inventory Page -->
+        <!-- Finance Page -->
         <div class="page-content" id="inventory-page" style="display: none;">
-            <div class="page-header">
-                <div class="header-left">
-                    <h2>Balances</h2>
-                    <p class="page-subtitle">Your cash and GCash float</p>
-                </div>
+            <section class="tt-hero tt-hero-blue">
+                <div class="tt-hero-label"><svg class="icon"><use href="#i-wallet"/></svg> <span>Total capital</span></div>
+                <div class="tt-hero-value" id="finCapital">₱0.00</div>
+            </section>
+
+            <div class="tt-stat tt-stat-red tt-wide">
+                <small>Total withdrawals</small>
+                <strong id="finWithdrawals">₱0.00</strong>
             </div>
 
-            <div class="inventory-grid">
-                <div class="inventory-card inventory-cash">
-                    <div class="inventory-card-head">
-                        <span class="inventory-icon"><svg class="icon"><use href="#i-cash"/></svg></span>
-                        <h3>Cash on Hand</h3>
-                    </div>
-                    <div class="balance-amount">₱<span id="cashBalance">0</span></div>
-                    <div class="balance-actions">
-                        <button class="btn btn-soft-success" onclick="adjustBalance('cash', 'add')">
-                            <svg class="icon"><use href="#i-plus"/></svg> Add
-                        </button>
-                        <button class="btn btn-soft-danger" onclick="adjustBalance('cash', 'subtract')">
-                            <svg class="icon"><use href="#i-minus"/></svg> Remove
-                        </button>
-                    </div>
-                </div>
+            <div class="tt-card tt-accounts">
+                <h3 class="tt-card-title">Account balances</h3>
+                <ul id="accountList"></ul>
+            </div>
 
-                <div class="inventory-card inventory-gcash">
-                    <div class="inventory-card-head">
-                        <span class="inventory-icon"><svg class="icon"><use href="#i-phone-device"/></svg></span>
-                        <h3>GCash Wallet</h3>
-                    </div>
-                    <div class="balance-amount">₱<span id="walletBalance">0</span></div>
-                    <div class="balance-actions">
-                        <button class="btn btn-soft-success" onclick="adjustBalance('gcash', 'add')">
-                            <svg class="icon"><use href="#i-plus"/></svg> Add
-                        </button>
-                        <button class="btn btn-soft-danger" onclick="adjustBalance('gcash', 'subtract')">
-                            <svg class="icon"><use href="#i-minus"/></svg> Remove
-                        </button>
-                    </div>
+            <div class="tt-section-head">
+                <h3>Finance</h3>
+                <div class="tt-head-right">
+                    <button type="button" class="tt-export" onclick="exportFinanceCsv()" aria-label="Export CSV" title="Export CSV">
+                        <svg class="icon"><use href="#i-download"/></svg>
+                    </button>
+                    <span class="tt-count" id="finCount">0</span>
                 </div>
-
-                <div class="inventory-summary">
-                    <h3>Summary</h3>
-                    <div class="summary-item">
-                        <span>Total Assets</span>
-                        <span>₱<span id="totalAssets">0</span></span>
-                    </div>
-                    <div class="summary-item">
-                        <span>Available for Cash Out</span>
-                        <span>₱<span id="availableCashOut">0</span></span>
-                    </div>
-                    <div class="summary-item">
-                        <span>Available for Cash In</span>
-                        <span>₱<span id="availableCashIn">0</span></span>
-                    </div>
+            </div>
+            <div class="tt-card tt-table-card">
+                <table class="tt-table">
+                    <thead>
+                        <tr><th>Date</th><th>Type</th><th>Acct</th><th class="tt-r">Amount</th><th></th></tr>
+                    </thead>
+                    <tbody id="financeBody"></tbody>
+                </table>
+                <div class="tt-empty" id="finEmpty" hidden>
+                    <svg class="icon"><use href="#i-clipboard"/></svg>
+                    <span>No finance entries yet</span>
                 </div>
             </div>
         </div>
@@ -614,19 +450,6 @@
                     </div>
                 </div>
 
-                <!-- Top Customers Card -->
-                <div class="report-card">
-                    <div class="report-card-header">
-                        <h3><svg class="icon"><use href="#i-award"/></svg> Top Customers</h3>
-                        <button class="btn btn-secondary btn-sm" onclick="exportCustomerReport()">
-                            <svg class="icon"><use href="#i-download"/></svg> Export
-                        </button>
-                    </div>
-                    <div id="topCustomers" class="report-content">
-                        <!-- Will be populated by JavaScript -->
-                    </div>
-                </div>
-
                 <!-- Fee Revenue Card -->
                 <div class="report-card">
                     <div class="report-card-header">
@@ -668,7 +491,7 @@
 
                     <!-- Plan choice + payment form -->
                     <section class="sub-plan-section" id="subPlanSection">
-                        <h3 class="section-title">Choose a plan</h3>
+                        <h3 class="section-title">Yearly plan</h3>
                         <div class="plan-options" id="planOptions"></div>
 
                         <form class="sub-form" id="subForm" hidden novalidate>
@@ -801,127 +624,11 @@
             <div class="page-header">
                 <div class="header-left">
                     <h2>Settings</h2>
-                    <p class="page-subtitle">Fees, business details and your data</p>
+                    <p class="page-subtitle">Your data and app options</p>
                 </div>
             </div>
 
             <div class="settings-grid">
-                <!-- Fee Structure Card -->
-                <div class="settings-card">
-                    <div class="settings-card-header">
-                        <div class="settings-icon icon-tone-green">
-                            <svg class="icon"><use href="#i-coins"/></svg>
-                        </div>
-                        <div>
-                            <h3>Fee Structure</h3>
-                            <p>Fees charged per amount tier</p>
-                        </div>
-                    </div>
-
-                    <div class="fee-settings">
-                        <div class="fee-section">
-                            <h4><span class="fee-dot fee-dot-in"></span> Cash In Fees</h4>
-                            <div class="fee-item">
-                                <div class="fee-label">
-                                    <label for="cashInFee1">Tier 1</label>
-                                    <span class="fee-description">₱50 – ₱1,000</span>
-                                </div>
-                                <div class="fee-input-wrapper">
-                                    <span class="currency-symbol">₱</span>
-                                    <input type="number" id="cashInFee1" value="5" min="0" step="1" inputmode="decimal">
-                                </div>
-                            </div>
-                            <div class="fee-item">
-                                <div class="fee-label">
-                                    <label for="cashInFee2">Tier 2</label>
-                                    <span class="fee-description">₱1,001 – ₱3,000</span>
-                                </div>
-                                <div class="fee-input-wrapper">
-                                    <span class="currency-symbol">₱</span>
-                                    <input type="number" id="cashInFee2" value="10" min="0" step="1" inputmode="decimal">
-                                </div>
-                            </div>
-                            <div class="fee-item">
-                                <div class="fee-label">
-                                    <label for="cashInFee3">Tier 3</label>
-                                    <span class="fee-description">₱3,001 and up</span>
-                                </div>
-                                <div class="fee-input-wrapper">
-                                    <span class="currency-symbol">₱</span>
-                                    <input type="number" id="cashInFee3" value="15" min="0" step="1" inputmode="decimal">
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="fee-section">
-                            <h4><span class="fee-dot fee-dot-out"></span> Cash Out Fees</h4>
-                            <div class="fee-item">
-                                <div class="fee-label">
-                                    <label for="cashOutFee1">Tier 1</label>
-                                    <span class="fee-description">₱100 – ₱1,000</span>
-                                </div>
-                                <div class="fee-input-wrapper">
-                                    <span class="currency-symbol">₱</span>
-                                    <input type="number" id="cashOutFee1" value="10" min="0" step="1" inputmode="decimal">
-                                </div>
-                            </div>
-                            <div class="fee-item">
-                                <div class="fee-label">
-                                    <label for="cashOutFee2">Tier 2</label>
-                                    <span class="fee-description">₱1,001 – ₱3,000</span>
-                                </div>
-                                <div class="fee-input-wrapper">
-                                    <span class="currency-symbol">₱</span>
-                                    <input type="number" id="cashOutFee2" value="15" min="0" step="1" inputmode="decimal">
-                                </div>
-                            </div>
-                            <div class="fee-item">
-                                <div class="fee-label">
-                                    <label for="cashOutFee3">Tier 3</label>
-                                    <span class="fee-description">₱3,001 and up</span>
-                                </div>
-                                <div class="fee-input-wrapper">
-                                    <span class="currency-symbol">₱</span>
-                                    <input type="number" id="cashOutFee3" value="20" min="0" step="1" inputmode="decimal">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <button class="btn btn-primary btn-block" onclick="saveFeeSettings()">
-                        <svg class="icon"><use href="#i-save"/></svg> Save Fee Settings
-                    </button>
-                </div>
-
-                <!-- Business Information Card -->
-                <div class="settings-card">
-                    <div class="settings-card-header">
-                        <div class="settings-icon icon-tone-blue">
-                            <svg class="icon"><use href="#i-store"/></svg>
-                        </div>
-                        <div>
-                            <h3>Business Information</h3>
-                            <p>Shown in the app menu</p>
-                        </div>
-                    </div>
-                    <div class="business-info">
-                        <div class="info-item">
-                            <label for="businessName">Business Name</label>
-                            <input type="text" id="businessName" placeholder="Enter business name" autocomplete="organization">
-                        </div>
-                        <div class="info-item">
-                            <label for="businessPhone">Contact Number</label>
-                            <input type="tel" id="businessPhone" placeholder="+63 9XX XXX XXXX">
-                        </div>
-                        <div class="info-item">
-                            <label for="gcashNumber">GCash Business Number</label>
-                            <input type="tel" id="gcashNumber" placeholder="09XX XXX XXXX">
-                        </div>
-                    </div>
-                    <button class="btn btn-primary btn-block" onclick="saveBusinessInfo()">
-                        <svg class="icon"><use href="#i-save"/></svg> Save Business Info
-                    </button>
-                </div>
-
                 <!-- Data Management Card -->
                 <div class="settings-card">
                     <div class="settings-card-header">
@@ -999,13 +706,13 @@
                 </button>
             </div>
             <div class="modal-body">
-                <form id="transactionForm">
+                <form id="transactionForm" onsubmit="event.preventDefault(); saveTransaction();">
                     <div class="form-group">
                         <label>Transaction Type</label>
                         <div class="type-toggle" role="radiogroup" aria-label="Transaction type">
                             <button type="button" class="type-option type-in" data-type="cashin" role="radio" aria-checked="false" onclick="setTransactionType('cashin')">
                                 <span class="type-option-icon"><svg class="icon"><use href="#i-in"/></svg></span>
-                                <span class="type-option-text"><strong>Cash In</strong><small>Customer loads GCash</small></span>
+                                <span class="type-option-text"><strong>Cash In</strong><small>Customer gives cash</small></span>
                             </button>
                             <button type="button" class="type-option type-out" data-type="cashout" role="radio" aria-checked="false" onclick="setTransactionType('cashout')">
                                 <span class="type-option-icon"><svg class="icon"><use href="#i-out"/></svg></span>
@@ -1019,17 +726,32 @@
                         </select>
                     </div>
 
-                    <div class="form-group">
-                        <label for="customerSelect">Customer</label>
-                        <select id="customerSelect" required>
-                            <option value="">Select customer</option>
-                            <!-- Populated by JavaScript -->
-                        </select>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="transactionDate">Date</label>
+                            <input type="date" id="transactionDate" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="transactionAccount">Account</label>
+                            <select id="transactionAccount" required>
+                                <option value="gcash">GCash</option>
+                                <option value="maya">Maya</option>
+                                <option value="bank">Bank</option>
+                            </select>
+                        </div>
                     </div>
 
                     <div class="form-group">
                         <label for="transactionAmount">Amount (₱)</label>
-                        <input type="number" id="transactionAmount" min="50" max="8000" step="1" inputmode="decimal" placeholder="0" oninput="calculateFee()" required>
+                        <input type="number" id="transactionAmount" min="1" step="0.01" inputmode="decimal" placeholder="0" oninput="calculateFee()" required>
+                        <div class="amount-chips" aria-label="Quick amounts">
+                            <button type="button" onclick="setQuickAmount(100)">100</button>
+                            <button type="button" onclick="setQuickAmount(200)">200</button>
+                            <button type="button" onclick="setQuickAmount(500)">500</button>
+                            <button type="button" onclick="setQuickAmount(1000)">1,000</button>
+                            <button type="button" onclick="setQuickAmount(2000)">2,000</button>
+                            <button type="button" onclick="setQuickAmount(3000)">3,000</button>
+                        </div>
                     </div>
 
                     <div class="form-row">
@@ -1045,12 +767,32 @@
 
                     <div class="form-group">
                         <label for="referenceNumber">Reference No. <span class="optional">optional</span></label>
-                        <input type="text" id="referenceNumber" placeholder="GCash reference number">
+                        <input type="text" id="referenceNumber" placeholder="Reference number">
                     </div>
 
                     <div class="form-group">
                         <label for="transactionNotes">Notes <span class="optional">optional</span></label>
                         <textarea id="transactionNotes" rows="2" placeholder="Additional notes..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Receipt <span class="optional">optional</span></label>
+                        <div class="tt-receipt-pick">
+                            <button type="button" class="tt-pick" onclick="document.getElementById('receiptCamera').click()">
+                                <svg class="icon"><use href="#i-camera"/></svg><span>Camera</span>
+                            </button>
+                            <button type="button" class="tt-pick" onclick="document.getElementById('receiptGallery').click()">
+                                <svg class="icon"><use href="#i-image"/></svg><span>Gallery</span>
+                            </button>
+                        </div>
+                        <input type="file" id="receiptCamera" accept="image/*" capture="environment" hidden onchange="handleReceiptFile(this)">
+                        <input type="file" id="receiptGallery" accept="image/*" hidden onchange="handleReceiptFile(this)">
+                        <div class="tt-receipt-preview" id="receiptPreview" hidden>
+                            <img id="receiptPreviewImg" alt="Receipt preview">
+                            <button type="button" class="tt-del" onclick="clearReceipt()" aria-label="Remove receipt">
+                                <svg class="icon"><use href="#i-x"/></svg>
+                            </button>
+                        </div>
                     </div>
                 </form>
             </div>
@@ -1061,71 +803,185 @@
         </div>
     </div>
 
-    <!-- Customer Modal -->
-    <div class="modal" id="customerModal">
+    <!-- Menu Modal -->
+    <div class="modal" id="menuModal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3 id="customerModalTitle">Add Customer</h3>
-                <button class="modal-close" onclick="closeModal('customerModal')" aria-label="Close">
+                <h3>Menu</h3>
+                <button class="modal-close" onclick="closeModal('menuModal')" aria-label="Close">
                     <svg class="icon"><use href="#i-x"/></svg>
                 </button>
             </div>
             <div class="modal-body">
-                <form id="customerForm">
-                    <div class="form-group">
-                        <label for="customerName">Full Name</label>
-                        <input type="text" id="customerName" autocomplete="off" required>
+                <div class="menu-owner">
+                    <button type="button" class="menu-owner-avatar" id="menuAvatar" onclick="document.getElementById('avatarInput').click()" aria-label="Change profile photo">
+                        <svg class="icon" id="menuAvatarIcon"><use href="#i-user"/></svg>
+                        <img id="menuAvatarImg" alt="" hidden>
+                        <span class="menu-avatar-cam"><svg class="icon"><use href="#i-camera"/></svg></span>
+                    </button>
+                    <input type="file" id="avatarInput" accept="image/*" hidden onchange="handleAvatarFile(this)">
+                    <div class="menu-owner-text">
+                        <strong id="menuOwnerName">Owner</strong>
+                        <span id="menuBusiness"></span>
                     </div>
+                    <span class="menu-plan-pill" id="menuPlan">—</span>
+                </div>
 
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="customerPhone">Phone Number</label>
-                            <input type="tel" id="customerPhone" placeholder="09XX XXX XXXX" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="customerGCash">GCash Number</label>
-                            <input type="tel" id="customerGCash" placeholder="09XX XXX XXXX">
-                        </div>
-                    </div>
+                <button type="button" class="menu-remove-photo" id="menuRemovePhoto" onclick="removeAvatar()" hidden>Remove photo</button>
 
-                    <div class="form-group">
-                        <label for="customerNotes">Notes <span class="optional">optional</span></label>
-                        <textarea id="customerNotes" rows="2" placeholder="Additional information..."></textarea>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeModal('customerModal')">Cancel</button>
-                <button class="btn btn-primary" onclick="saveCustomer()">Save Customer</button>
+                <div class="menu-section-label">Owner details</div>
+                <dl class="menu-details">
+                    <div><dt><svg class="icon"><use href="#i-mail"/></svg>Email</dt><dd id="menuEmail">—</dd></div>
+                    <div><dt><svg class="icon"><use href="#i-phone"/></svg>Phone</dt><dd id="menuPhone">—</dd></div>
+                    <div><dt><svg class="icon"><use href="#i-store"/></svg>Business</dt><dd id="menuBusinessName">—</dd></div>
+                </dl>
+
+                <div class="menu-section-label">Manage</div>
+
+                <div class="menu-list">
+                    <button type="button" class="menu-row" onclick="menuGoTo('subscription')">
+                        <span class="menu-row-icon"><svg class="icon"><use href="#i-crown"/></svg></span>
+                        <span class="menu-row-text">Subscription</span>
+                        <svg class="icon menu-row-chevron"><use href="#i-chevron"/></svg>
+                    </button>
+                    <button type="button" class="menu-row is-danger" onclick="menuResetData()">
+                        <span class="menu-row-icon"><svg class="icon"><use href="#i-trash"/></svg></span>
+                        <span class="menu-row-text">Reset data</span>
+                        <svg class="icon menu-row-chevron"><use href="#i-chevron"/></svg>
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Balance Adjustment Modal -->
-    <div class="modal" id="balanceModal">
+    <!-- Calendar Modal -->
+    <div class="modal" id="calendarModal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3 id="balanceModalTitle">Adjust Balance</h3>
-                <button class="modal-close" onclick="closeModal('balanceModal')" aria-label="Close">
+                <h3>Pick a date</h3>
+                <button class="modal-close" onclick="closeModal('calendarModal')" aria-label="Close">
                     <svg class="icon"><use href="#i-x"/></svg>
                 </button>
             </div>
             <div class="modal-body">
-                <form id="balanceForm">
-                    <div class="form-group">
-                        <label id="balanceTypeLabel" for="balanceAmount">Amount (₱)</label>
-                        <input type="number" id="balanceAmount" min="1" step="0.01" inputmode="decimal" placeholder="0" required>
-                    </div>
+                <div class="cal-nav">
+                    <button type="button" class="cal-arrow cal-prev" onclick="shiftCalendar(-1)" aria-label="Previous month"><svg class="icon"><use href="#i-chevron"/></svg></button>
+                    <strong id="calTitle"></strong>
+                    <button type="button" class="cal-arrow" onclick="shiftCalendar(1)" aria-label="Next month"><svg class="icon"><use href="#i-chevron"/></svg></button>
+                </div>
+                <div class="cal-grid cal-week"><span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span></div>
+                <div class="cal-grid" id="calDays"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="setTransactionRange('all'); closeModal('calendarModal')">Clear</button>
+                <button class="btn btn-primary" onclick="closeModal('calendarModal')">Close</button>
+            </div>
+        </div>
+    </div>
 
-                    <div class="form-group">
-                        <label for="balanceReason">Reason</label>
-                        <textarea id="balanceReason" rows="2" placeholder="e.g. Loaded from bank, Deposit" required></textarea>
+    <!-- Add Rate Modal -->
+    <div class="modal" id="rateModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add Rate</h3>
+                <button class="modal-close" onclick="closeModal('rateModal')" aria-label="Close">
+                    <svg class="icon"><use href="#i-x"/></svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="rateForm" onsubmit="event.preventDefault(); addRate();">
+                    <div class="rate-section-label">Range</div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="rateMin">From (₱)</label>
+                            <input type="number" id="rateMin" min="0" step="1" inputmode="decimal" placeholder="1" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="rateMax">To (₱)</label>
+                            <input type="number" id="rateMax" min="0" step="1" inputmode="decimal" placeholder="and up">
+                        </div>
+                    </div>
+                    <div class="rate-section-label">Fee amount</div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="rateIn">Cash in (₱)</label>
+                            <input type="number" id="rateIn" min="0" step="0.01" inputmode="decimal" placeholder="0" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="rateOut">Cash out (₱)</label>
+                            <input type="number" id="rateOut" min="0" step="0.01" inputmode="decimal" placeholder="0" required>
+                        </div>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeModal('balanceModal')">Cancel</button>
-                <button class="btn btn-primary" onclick="saveBalanceAdjustment()">Save Adjustment</button>
+                <button class="btn btn-secondary" onclick="closeModal('rateModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="addRate()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Finance Modal: add capital, withdrawal, transfer -->
+    <div class="modal" id="financeModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="financeModalTitle">Add Capital</h3>
+                <button class="modal-close" onclick="closeModal('financeModal')" aria-label="Close">
+                    <svg class="icon"><use href="#i-x"/></svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="financeForm" onsubmit="event.preventDefault(); saveFinance();">
+                    <div class="form-group">
+                        <label for="finDate">Date</label>
+                        <input type="date" id="finDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="finAmount">Amount (₱)</label>
+                        <input type="number" id="finAmount" min="0.01" step="0.01" inputmode="decimal" placeholder="0.00" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="finAccount" id="finAccountLabel">Account</label>
+                        <select id="finAccount" required>
+                            <option value="cash">Cash</option>
+                            <option value="gcash">GCash</option>
+                            <option value="maya">Maya</option>
+                            <option value="bank">Bank</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="finToGroup" hidden>
+                        <label for="finTo">Transfer to</label>
+                        <select id="finTo">
+                            <option value="cash">Cash</option>
+                            <option value="gcash" selected>GCash</option>
+                            <option value="maya">Maya</option>
+                            <option value="bank">Bank</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="finNoteGroup" hidden>
+                        <label for="finNote">Note <span class="optional">optional</span></label>
+                        <input type="text" id="finNote" placeholder="Reason">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('financeModal')">Cancel</button>
+                <button class="btn btn-primary" id="financeSaveBtn" onclick="saveFinance()">Save Capital</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Receipt viewer -->
+    <div class="modal" id="receiptModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Receipt</h3>
+                <button class="modal-close" onclick="closeModal('receiptModal')" aria-label="Close">
+                    <svg class="icon"><use href="#i-x"/></svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <img id="receiptImage" class="tt-receipt-full" alt="Receipt">
             </div>
         </div>
     </div>
@@ -1157,8 +1013,18 @@
                             <input type="number" id="welcomeGcash" min="0" step="0.01" inputmode="decimal" placeholder="0">
                         </div>
                     </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="welcomeMaya">Maya Balance (₱)</label>
+                            <input type="number" id="welcomeMaya" min="0" step="0.01" inputmode="decimal" placeholder="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="welcomeBank">Bank Balance (₱)</label>
+                            <input type="number" id="welcomeBank" min="0" step="0.01" inputmode="decimal" placeholder="0">
+                        </div>
+                    </div>
                 </form>
-                <p class="welcome-hint">You can change these anytime in Balances and Settings.</p>
+                <p class="welcome-hint">You can change these anytime in Finance.</p>
             </div>
             <div class="modal-footer">
                 <button type="submit" form="welcomeForm" class="btn btn-primary btn-block">Get Started</button>
@@ -1189,27 +1055,23 @@
     <!-- Mobile: drawer backdrop + bottom tab bar -->
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
-    <nav class="bottom-nav" id="bottomNav" aria-label="Main">
-        <a href="#dashboard" data-page="dashboard" class="bottom-nav-item active">
-            <svg class="icon"><use href="#i-home"/></svg>
-            <span class="bottom-nav-label">Inventory</span>
+    <nav class="tt-tabs" id="bottomNav" aria-label="Main">
+        <a href="#dashboard" data-page="dashboard" class="tt-tab active">
+            <svg class="icon"><use href="#i-receipt"/></svg>
+            <span>Trans</span>
         </a>
-        <a href="#transactions" data-page="transactions" class="bottom-nav-item">
-            <svg class="icon"><use href="#i-transfer"/></svg>
-            <span class="bottom-nav-label">History</span>
+        <a href="#rates" data-page="rates" class="tt-tab">
+            <svg class="icon"><use href="#i-percent"/></svg>
+            <span>Rates</span>
         </a>
-        <button type="button" class="bottom-nav-fab" onclick="openTransactionModal()" aria-label="New transaction">
-            <svg class="icon"><use href="#i-plus"/></svg>
-        </button>
-        <a href="#customers" data-page="customers" class="bottom-nav-item">
-            <svg class="icon"><use href="#i-users"/></svg>
-            <span class="bottom-nav-label">Customers</span>
+        <a href="#inventory" data-page="inventory" class="tt-tab">
+            <svg class="icon"><use href="#i-wallet"/></svg>
+            <span>Finance</span>
         </a>
-        <button type="button" class="bottom-nav-item" id="bottomNavMore" data-more-pages="inventory reports subscription settings">
-            <svg class="icon"><use href="#i-menu"/></svg>
-            <span class="bottom-nav-label">More</span>
-        </button>
     </nav>
+    <button type="button" class="tt-fab" id="fabButton" aria-label="Open menu" aria-expanded="false" aria-haspopup="true">
+        <svg class="icon"><use href="#i-plus"/></svg>
+    </button>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config.js"></script>

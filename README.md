@@ -1,6 +1,6 @@
 # CashG Inventory App
 
-CashG is a mobile-first, installable inventory app for GCash Cash In / Cash Out businesses, built with vanilla HTML, CSS, and JavaScript. Users sign in with an account created by the admin and keep a monthly or yearly subscription; their inventory records stay private on their own device.
+CashG is a mobile-first, installable inventory app for GCash Cash In / Cash Out businesses, built with vanilla HTML, CSS, and JavaScript. Users sign in with an account created by the admin and keep a yearly subscription; their inventory records stay private on their own device.
 
 > **First time?** Follow [SETUP.md](SETUP.md) to connect Supabase (accounts, subscriptions, admin dashboard).
 
@@ -51,14 +51,14 @@ CashG is a mobile-first, installable inventory app for GCash Cash In / Cash Out 
 ### 🔑 Accounts & Subscriptions
 - Sign in with an account created by the admin (no public sign-up)
 - Subscription page: plan status, dates and days left
-- Monthly or Yearly plan: pay by GCash or bank transfer, then generate and send a PNG receipt
+- Yearly plan: pay by GCash or bank transfer, then generate and send a PNG receipt
 - In-app notifications (payment approved/rejected, expiry reminders)
 - Records become read-only when the subscription expires
 
 ### 🛡️ Admin Dashboard (`/admin/`)
 - Create user accounts, reset passwords, disable or delete accounts
 - Review payment proofs and approve or reject them
-- Monitor monthly / yearly subscriptions, expiring plans and revenue
+- Monitor yearly subscriptions, expiring plans and revenue
 - Grant extra time manually and send notifications to users
 - Set plan prices and the GCash details users pay to
 

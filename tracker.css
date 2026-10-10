@@ -1,0 +1,796 @@
+/* =====================================================================
+   CashG tracker layout: top bar, three tabs (Trans / Rates / Finance),
+   a floating + button that opens the menu, and a light / dark theme.
+   Loaded after styles.css, so it overrides the older sidebar layout.
+   ===================================================================== */
+
+:root {
+    --tt-nav-h: 62px;
+    --tt-blue: #0b5ed7;
+    --tt-blue-deep: #0a3d91;
+    --tt-orange: #f59e0b;
+    --tt-orange-deep: #d97706;
+    --tt-width: 640px;
+}
+
+/* ---------- Dark theme: remap the shared tokens ---------- */
+html[data-theme="dark"] {
+    color-scheme: dark;
+    --surface: #172033;
+    --surface-2: #1d2940;
+    --canvas: #0d1424;
+    --line: #2a3650;
+    --line-soft: #223048;
+    --ink: #e8eef7;
+    --ink-2: #a9b7cc;
+    --ink-3: #7487a1;
+    --brand-50: rgba(4, 173, 114, 0.16);
+    --in-50: rgba(14, 159, 110, 0.18);
+    --out-50: rgba(232, 89, 12, 0.18);
+    --violet-50: rgba(124, 58, 237, 0.18);
+    --teal-50: rgba(8, 145, 178, 0.18);
+    --red-50: rgba(225, 29, 72, 0.18);
+    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-pop: 0 12px 32px rgba(0, 0, 0, 0.5);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+}
+
+html[data-theme="dark"] body {
+    background: var(--canvas);
+    color: var(--ink);
+    background-image: none;
+}
+
+html[data-theme="dark"] input,
+html[data-theme="dark"] select,
+html[data-theme="dark"] textarea {
+    background-color: var(--surface-2);
+    color: var(--ink);
+    border-color: var(--line);
+}
+
+html[data-theme="dark"] .modal-content,
+html[data-theme="dark"] .modal-header {
+    background: var(--surface);
+}
+
+/* ---------- Page frame ---------- */
+body {
+    background-image: none;
+}
+
+.main-content {
+    margin-left: 0;
+    max-width: var(--tt-width);
+    margin-inline: auto;
+    min-height: 100vh;
+    padding-bottom: calc(var(--tt-nav-h) + env(safe-area-inset-bottom) + 96px);
+}
+
+.page-content {
+    padding: 0.75rem 0.75rem 1rem;
+    max-width: none;
+}
+
+/* Reports, Settings and Subscription were built for a wide screen; keep them one column */
+.reports-grid,
+.settings-grid {
+    grid-template-columns: 1fr;
+}
+
+.report-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+}
+
+/* ---------- Top bar ---------- */
+.tt-header {
+    position: sticky;
+    top: 0;
+    z-index: 900;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: calc(0.5rem + env(safe-area-inset-top)) 0.875rem 0.5rem;
+    background: var(--surface);
+    border-bottom: 1px solid var(--line);
+}
+
+.tt-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+}
+
+.tt-logo {
+    width: 38px;
+    height: 38px;
+    object-fit: contain;
+    border-radius: 10px;
+    flex-shrink: 0;
+}
+
+.tt-brand-name {
+    font-size: 1.25rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+}
+
+.tt-brand-name span {
+    color: var(--brand);
+}
+
+.tt-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.tt-theme {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    height: 40px;
+    padding: 0 0.875rem;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--surface-2);
+    color: var(--ink);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+
+.tt-theme .icon {
+    width: 1.1rem;
+    height: 1.1rem;
+}
+
+.sub-banner {
+    max-width: none;
+    margin: 0.75rem 0.75rem 0;
+}
+
+/* ---------- Hero cards ---------- */
+.tt-hero {
+    padding: 0.875rem 1rem 1rem;
+    border-radius: 18px;
+    color: #fff;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.12);
+}
+
+.tt-hero-orange { background: linear-gradient(135deg, var(--tt-orange), var(--tt-orange-deep)); }
+.tt-hero-blue { background: linear-gradient(135deg, var(--tt-blue), var(--tt-blue-deep)); }
+
+.tt-hero-label {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    opacity: 0.92;
+}
+
+.tt-hero-label .icon {
+    width: 1rem;
+    height: 1rem;
+}
+
+.tt-hero-value {
+    margin-top: 0.15rem;
+    font-size: 2.1rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+}
+
+.tt-pair {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.625rem;
+    margin-top: 0.625rem;
+}
+
+.tt-stat {
+    padding: 0.7rem 0.9rem;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-left-width: 4px;
+    border-radius: 14px;
+    min-width: 0;
+}
+
+.tt-stat-green { border-left-color: var(--in); }
+.tt-stat-blue { border-left-color: var(--tt-blue); }
+
+.tt-stat small,
+.tt-flow small {
+    display: block;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+}
+
+.tt-stat strong {
+    display: block;
+    margin-top: 0.1rem;
+    font-size: 1.2rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tt-stat-green strong { color: var(--in); }
+.tt-stat-blue strong { color: var(--tt-blue); }
+html[data-theme="dark"] .tt-stat-blue strong { color: #6ea8ff; }
+
+.tt-flow {
+    padding: 0.5rem 0.75rem;
+    border-radius: 12px;
+    background: var(--brand-50);
+    text-align: center;
+}
+
+.tt-flow strong {
+    font-size: 0.98rem;
+    font-weight: 800;
+    color: var(--ink);
+}
+
+/* ---------- Filters ---------- */
+.tt-filters {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.875rem;
+}
+
+.tt-chips {
+    display: flex;
+    gap: 0.4rem;
+    flex: 1;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.tt-chip {
+    flex-shrink: 0;
+    height: 38px;
+    padding: 0 1rem;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--surface);
+    color: var(--ink-2);
+    font: inherit;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+
+.tt-chip.active {
+    background: var(--brand);
+    border-color: var(--brand);
+    color: #fff;
+}
+
+.tt-date-btn {
+    position: relative;
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--surface);
+    color: var(--ink-2);
+    cursor: pointer;
+    overflow: hidden;
+}
+
+.tt-date-btn.active {
+    background: var(--brand-50);
+    border-color: var(--brand);
+    color: var(--brand);
+}
+
+/* The native date input sits invisibly over the button so tapping it opens the picker */
+.tt-date-btn input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+}
+
+/* ---------- Sections and tables ---------- */
+.tt-section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 1rem 0.25rem 0.5rem;
+}
+
+.tt-section-head h3 {
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+}
+
+.tt-count {
+    min-width: 26px;
+    padding: 0.1rem 0.5rem;
+    border-radius: 999px;
+    background: var(--brand-50);
+    color: var(--brand);
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-align: center;
+}
+
+.tt-card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    box-shadow: var(--shadow-card);
+}
+
+.tt-table-card {
+    overflow: hidden;
+}
+
+.tt-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+.tt-table th {
+    padding: 0.7rem 0.75rem;
+    text-align: left;
+    font-size: 0.66rem;
+    font-weight: 800;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    border-bottom: 1px solid var(--line);
+}
+
+.tt-table td {
+    padding: 0.65rem 0.75rem;
+    border-bottom: 1px solid var(--line-soft);
+    vertical-align: middle;
+    color: var(--ink);
+}
+
+.tt-table tr:last-child td { border-bottom: 0; }
+.tt-table .tt-r { text-align: right; }
+.tt-table[hidden] { display: none; }
+
+.tt-table small {
+    display: block;
+    font-size: 0.68rem;
+    font-weight: 500;
+    color: var(--ink-3);
+}
+
+.tt-date { white-space: nowrap; font-weight: 600; }
+.tt-note { max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-2); }
+
+.tt-amt { font-weight: 800; white-space: nowrap; }
+.tt-amt.is-in { color: var(--in); }
+.tt-amt.is-out { color: var(--out); }
+
+.tt-badge {
+    display: inline-block;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.66rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.tt-badge.is-in { background: var(--in-50); color: var(--in); }
+.tt-badge.is-out { background: var(--out-50); color: var(--out); }
+
+.tt-del {
+    display: inline-grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--surface);
+    color: var(--red);
+    cursor: pointer;
+}
+
+.tt-del .icon { width: 1rem; height: 1rem; }
+
+.tt-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 2rem 1rem;
+    color: var(--ink-3);
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.tt-empty[hidden] { display: none; }
+.tt-empty .icon { width: 2.2rem; height: 2.2rem; opacity: 0.55; }
+
+/* ---------- Rates form ---------- */
+.tt-rate-form {
+    padding: 0.875rem;
+    margin-bottom: 0.75rem;
+}
+
+.tt-rate-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.625rem;
+}
+
+.tt-rate-grid label span {
+    display: block;
+    margin-bottom: 0.25rem;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+}
+
+.tt-rate-grid input {
+    width: 100%;
+    min-height: 44px;
+    padding: 0 0.75rem;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--surface-2);
+    color: var(--ink);
+    font: inherit;
+}
+
+.tt-btn {
+    width: 100%;
+    min-height: 46px;
+    margin-top: 0.75rem;
+    border: 0;
+    border-radius: 12px;
+    font: inherit;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+
+.tt-btn-primary {
+    background: var(--brand-gradient);
+    color: #fff;
+}
+
+/* ---------- Finance ---------- */
+.tt-accounts {
+    margin-top: 0.625rem;
+    padding: 0.5rem 0.875rem 0.375rem;
+}
+
+.tt-card-title {
+    padding: 0.5rem 0 0.375rem;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+}
+
+.tt-accounts ul { list-style: none; }
+
+.tt-account {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.7rem 0;
+    border-bottom: 1px solid var(--line-soft);
+}
+
+.tt-account:last-child { border-bottom: 0; }
+
+.tt-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.tt-dot.is-cash { background: var(--in); }
+.tt-dot.is-digital { background: var(--tt-blue); }
+
+.tt-account-name {
+    flex: 1;
+    min-width: 0;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+.tt-account-amount {
+    font-size: 1rem;
+    font-weight: 800;
+    color: var(--tt-blue);
+}
+
+html[data-theme="dark"] .tt-account-amount { color: #6ea8ff; }
+.tt-dot.is-cash + .tt-account-name + .tt-account-amount { color: var(--in); }
+.tt-account-amount.is-neg { color: var(--red) !important; }
+
+.tt-account-actions {
+    display: flex;
+    gap: 0.375rem;
+}
+
+.tt-mini {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border: 0;
+    border-radius: 10px;
+    cursor: pointer;
+}
+
+.tt-mini .icon { width: 1rem; height: 1rem; }
+.tt-mini.is-add { background: var(--in-50); color: var(--in); }
+.tt-mini.is-remove { background: var(--red-50); color: var(--red); }
+
+/* ---------- Bottom tabs ---------- */
+.tt-tabs {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1400;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    height: calc(var(--tt-nav-h) + env(safe-area-inset-bottom));
+    padding: 0.35rem max(0.5rem, calc((100vw - var(--tt-width)) / 2 + 0.5rem)) env(safe-area-inset-bottom);
+    background: var(--surface);
+    border-top: 1px solid var(--line);
+    box-shadow: 0 -6px 18px rgba(4, 38, 61, 0.06);
+}
+
+.tt-tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    border-radius: 14px;
+    color: var(--ink-3);
+    text-decoration: none;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.tt-tab .icon { width: 1.35rem; height: 1.35rem; }
+.tt-tab.active { color: var(--brand); background: var(--brand-50); }
+
+/* ---------- Floating + button and its menu ---------- */
+.tt-fab {
+    position: fixed;
+    right: max(1rem, calc((100vw - var(--tt-width)) / 2 + 1rem));
+    bottom: calc(var(--tt-nav-h) + env(safe-area-inset-bottom) + 1rem);
+    z-index: 1700;
+    display: grid;
+    place-items: center;
+    width: 58px;
+    height: 58px;
+    border: 0;
+    border-radius: 50%;
+    background: var(--brand-gradient);
+    color: #fff;
+    box-shadow: 0 8px 20px rgba(3, 149, 95, 0.4);
+    cursor: pointer;
+    transition: transform 0.2s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.tt-fab .icon {
+    width: 28px;
+    height: 28px;
+    transition: transform 0.2s ease;
+}
+
+.tt-fab.is-open .icon { transform: rotate(45deg); }
+.tt-fab:active { transform: scale(0.94); }
+
+/* The old sidebar is now the pop-up above the + button, at every screen width */
+.sidebar {
+    left: auto;
+    top: auto;
+    right: max(1rem, calc((100vw - var(--tt-width)) / 2 + 1rem));
+    bottom: calc(var(--tt-nav-h) + env(safe-area-inset-bottom) + 1rem + 58px + 0.75rem);
+    width: min(268px, calc(100vw - 2rem));
+    height: auto;
+    max-height: calc(100vh - var(--tt-nav-h) - 160px);
+    padding-top: 0;
+    z-index: 1650;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    box-shadow: var(--shadow-pop);
+    transform-origin: bottom right;
+    transform: scale(0.85) translateY(12px);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: transform 0.2s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.16s ease, visibility 0s linear 0.2s;
+}
+
+.sidebar.active {
+    transform: none;
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transition-delay: 0s;
+}
+
+.sidebar .sidebar-header { display: none; }
+.sidebar .sidebar-menu { padding: 0.5rem 0; }
+.sidebar .menu-item a { padding: 0.75rem 1rem; }
+
+.sidebar-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 1500;
+    background: rgba(15, 23, 42, 0.3);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+}
+
+.sidebar-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* The bar and + button stay above the dim layer */
+.tt-tabs { z-index: 1400; }
+
+/* ---------- Dialogs stay centered at every width ---------- */
+.modal,
+.modal.active {
+    align-items: center;
+}
+
+/* Dark theme: drop the light-green page wash */
+html[data-theme="dark"] body {
+    background: var(--canvas) !important;
+}
+
+html[data-theme="dark"] body::before,
+html[data-theme="dark"] body::after {
+    display: none;
+}
+
+html[data-theme="dark"] .tt-logo {
+    background: #fff;
+    padding: 2px;
+}
+
+/* ---------- Finance entries, receipts, wide stat ---------- */
+.tt-stat-red { border-left-color: var(--red); }
+.tt-stat-red strong { color: var(--red); }
+.tt-wide { margin-top: 0.625rem; }
+
+.tt-badge.is-add,
+.tt-badge.is-receive { background: var(--in-50); color: var(--in); }
+.tt-badge.is-withdraw { background: var(--red-50); color: var(--red); }
+.tt-badge.is-send { background: var(--out-50); color: var(--out); }
+
+.tt-account-total {
+    border-top: 2px solid var(--line);
+    border-bottom: 0;
+    margin-top: 0.125rem;
+}
+.tt-account-total .tt-account-name { padding-left: 1.2rem; }
+.tt-account-total .tt-account-amount { color: var(--ink); }
+
+.tt-actions-cell {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.375rem;
+    align-items: center;
+}
+
+.tt-receipt {
+    display: inline-grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--brand-50);
+    color: var(--brand);
+    cursor: pointer;
+}
+.tt-receipt .icon { width: 1rem; height: 1rem; }
+
+.tt-receipt-pick {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.625rem;
+}
+
+.tt-pick {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.75rem 0.5rem;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--surface-2);
+    color: var(--ink);
+    font: inherit;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+.tt-pick .icon { width: 1.4rem; height: 1.4rem; color: var(--brand); }
+
+.tt-receipt-preview {
+    position: relative;
+    margin-top: 0.625rem;
+}
+.tt-receipt-preview[hidden] { display: none; }
+.tt-receipt-preview img {
+    display: block;
+    width: 100%;
+    max-height: 220px;
+    object-fit: contain;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    background: var(--surface-2);
+}
+.tt-receipt-preview .tt-del {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    color: var(--ink);
+}
+
+.tt-receipt-full {
+    display: block;
+    width: 100%;
+    max-height: 70vh;
+    object-fit: contain;
+    border-radius: 12px;
+}

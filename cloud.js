@@ -61,7 +61,23 @@ const Cloud = (() => {
         return result.url;
     }
 
+    // ImageKit URLs can be resized and optimised on the fly with ?tr=...
+    function imageUrl(url, { width = 900, quality = 80 } = {}) {
+        if (!url || !/^https:\/\/ik\.imagekit\.io\//.test(url)) return url;
+        const transform = `tr=w-${width},q-${quality},f-auto`;
+        return url + (url.includes('?') ? '&' : '?') + transform;
+    }
+
     return {
+        imageUrl,
+
+        // True when a transaction receipt can go to ImageKit right now
+        canUploadReceipts() {
+            return Boolean(client && cfg.imagekitPublicKey && navigator.onLine);
+        },
+
+        uploadReceipt: (blob, fileName) => uploadToImageKit(blob, fileName),
+
         // config.js filled in
         hasConfig: isConfigured,
         // config filled in AND the Supabase library loaded (needs internet the first time)
@@ -119,9 +135,16 @@ const Cloud = (() => {
             let receiptUrl = null;
             let proofPath = null;
 
+            // ImageKit first. If it isn't set up (or fails), keep the receipt in the
+            // private Supabase bucket instead so Send Receipt still works.
             if (cfg.imagekitPublicKey) {
-                receiptUrl = await uploadToImageKit(receiptBlob, fileName);
-            } else {
+                try {
+                    receiptUrl = await uploadToImageKit(receiptBlob, fileName);
+                } catch (error) {
+                    console.warn('ImageKit upload failed, using Supabase Storage instead', error);
+                }
+            }
+            if (!receiptUrl) {
                 proofPath = `${userId}/${fileName}`;
                 unwrap(await client.storage.from(PROOF_BUCKET).upload(proofPath, receiptBlob, {
                     contentType: 'image/png',

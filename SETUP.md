@@ -122,7 +122,7 @@ Cloudflare Pages or GitHub Pages. No build step.
 ## 8. First run
 
 1. Open `/admin/` and sign in with your admin account.
-2. **Settings:** set the Monthly and Yearly prices, **your GCash name and number**,
+2. **Settings:** set the Yearly price, **your GCash name and number**,
    and (optional) **your bank, account name and account number** (users see these
    when they pay). Leave the bank blank to offer GCash only.
 3. **New Account:** create a login for a customer. Choose "No plan yet" (they pay
@@ -131,7 +131,7 @@ Cloudflare Pages or GitHub Pages. No build step.
 
 ## How subscriptions work
 
-1. The user signs in to the app → **Subscription** → chooses **Monthly** or **Yearly**.
+1. The user signs in to the app → **Subscription** → pays for the **Yearly** plan.
 2. They pick **GCash** or **Bank Transfer**, send the amount to the account shown,
    then fill in the form: name, mobile, business, address, the account they paid
    from, and the **reference number** of the payment.
@@ -140,7 +140,7 @@ Cloudflare Pages or GitHub Pages. No build step.
 4. It shows up in **Admin → Payments** as *Pending*. Open it to see the details and
    the receipt image, check the reference number against your GCash / bank
    history, then **Approve** or **Reject** (with an optional note).
-5. Approving adds 1 month or 1 year, starting after their current plan ends. The
+5. Approving adds 1 year, starting after their current plan ends. The
    user gets a notification in the app, and the Subscription page shows the dates
    and days left.
 6. Reminders appear in the app 7 days before expiry. When a plan expires, the

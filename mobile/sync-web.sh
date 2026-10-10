@@ -11,8 +11,8 @@ rm -rf "$DEST"
 mkdir -p "$DEST/vendor"
 
 # App files only (no admin/, supabase/, mobile/, node_modules)
-cp "$SRC"/index.html "$SRC"/styles.css "$SRC"/*.js "$SRC"/manifest.webmanifest "$DEST"/
-cp -r "$SRC"/icons "$DEST"/
+cp "$SRC"/index.html "$SRC"/*.css "$SRC"/*.js "$SRC"/manifest.webmanifest "$DEST"/
+cp -r "$SRC"/icons "$SRC"/fonts "$DEST"/
 rm -f "$DEST/sw.js"
 
 # Bundle the Supabase library so the app starts without internet

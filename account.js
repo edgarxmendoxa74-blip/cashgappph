@@ -15,7 +15,7 @@ const DAY_MS = 86400000;
 
 let currentUser = null;      // { id, email }
 let account = null;          // { profile, subscriptions, settings, requests, notifications, fetchedAt }
-let selectedPlan = null;     // 'monthly' | 'yearly'
+let selectedPlan = null;     // 'yearly'
 let selectedMethod = null;   // 'gcash' | 'bank'
 let generatedReceipt = null; // { blob, url, receiptNo, plan, method, amount }
 let accountRefreshTimer = null;
@@ -265,7 +265,7 @@ window.addEventListener('online', () => refreshAccount());
 // Subscription state
 // ---------------------------------------------------------------------
 
-const PLAN_LABELS = { monthly: 'Monthly', yearly: 'Yearly', trial: 'Free Trial' };
+const PLAN_LABELS = new Proxy({ yearly: 'Yearly', trial: 'Free Trial' }, { get: (labels, plan) => labels[plan] ?? 'Plan' });
 const METHOD_LABELS = { gcash: 'GCash', bank: 'Bank Transfer' };
 
 function getSubscriptionState() {
@@ -323,7 +323,7 @@ function formatLongDate(value) {
 function planPrice(plan) {
     const s = account?.settings;
     if (!s) return null;
-    return Number(plan === 'monthly' ? s.monthly_price : s.yearly_price);
+    return Number(s.yearly_price);
 }
 
 // ---------------------------------------------------------------------
@@ -367,7 +367,7 @@ function renderSubscriptionBanner() {
         action = state.pending ? 'View' : 'Renew';
     } else if (state.status === 'none') {
         tone = 'info';
-        text = state.pending ? 'Payment under review. We\'ll notify you once approved.' : 'Choose a plan to start using CashG.';
+        text = state.pending ? 'Payment under review. We\'ll notify you once approved.' : 'Subscribe to the Yearly plan to start using CashG.';
         action = state.pending ? 'View' : 'Subscribe';
     }
 
@@ -428,7 +428,7 @@ function renderSubscriptionPage() {
         ` : `
             <p class="sub-status-note">${state.status === 'expired'
                 ? `Your access ended on <strong>${formatLongDate(state.endsAt)}</strong>. Your records are safe but read-only until you renew.`
-                : 'Choose Monthly or Yearly below, pay via GCash or bank transfer, then send us your receipt.'}</p>
+                : 'Pay for the Yearly plan below via GCash or bank transfer, then send us your receipt.'}</p>
         `}
         ${!account ? '<p class="sub-status-note">Connect to the internet to load your subscription.</p>' : ''}
     `;
@@ -458,9 +458,8 @@ function renderSubscriptionPage() {
 
 function renderPlanOptions() {
     if (!account) return;
-    const monthly = planPrice('monthly');
     const yearly = planPrice('yearly');
-    const savings = monthly && yearly ? Math.round((1 - yearly / (monthly * 12)) * 100) : 0;
+    selectedPlan = 'yearly'; // the only plan on sale
 
     const option = (plan, price, per, note) => `
         <button type="button" class="plan-option ${selectedPlan === plan ? 'is-selected' : ''}" onclick="selectPlan('${plan}')">
@@ -474,8 +473,7 @@ function renderPlanOptions() {
     `;
 
     document.getElementById('planOptions').innerHTML =
-        option('monthly', monthly, 'month', 'Billed every month') +
-        option('yearly', yearly, 'year', savings > 0 ? `<span class="plan-save">Save ${savings}%</span> vs monthly` : 'Billed once a year');
+        option('yearly', yearly, 'year', 'Billed once a year');
 
     const form = document.getElementById('subForm');
     form.hidden = !selectedPlan;
@@ -843,7 +841,7 @@ function drawReceipt(ctx, r, logo, draw) {
         ctx.fillText(receiptPeso(r.amount), W / 2, y + 56);
         ctx.fillStyle = ink2;
         ctx.font = font(500, 16);
-        ctx.fillText(`${PLAN_LABELS[r.plan]} plan · ${r.plan === 'monthly' ? '1 month' : '1 year'} access`, W / 2, y + 86);
+        ctx.fillText(`${PLAN_LABELS[r.plan]} plan · 1 year access`, W / 2, y + 86);
 
         // Status pill
         ctx.font = font(700, 13);
@@ -906,13 +904,6 @@ function drawReceipt(ctx, r, logo, draw) {
     if (r.method === 'bank') row('Bank', r.senderBank);
     row('Account name', r.senderName);
     row(r.method === 'bank' ? 'Account number' : 'GCash number', r.senderAccount);
-
-    section('Customer');
-    row('Full name', r.fullName);
-    row('Mobile', r.phone);
-    row('Email', r.email);
-    if (r.businessName) row('Business', r.businessName);
-    if (r.address) row('Address', r.address);
 
     // Footer
     y += 8;
