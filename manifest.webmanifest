@@ -1,6 +1,6 @@
 {
-  "name": "CashG Inventory App",
-  "short_name": "CashG",
+  "name": "CashGee Inventory App",
+  "short_name": "CashGee",
   "description": "Track your Cash In / Cash Out, customers and balances. Works offline, no account needed.",
   "id": "./",
   "start_url": "./",

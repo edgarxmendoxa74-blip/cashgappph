@@ -1,5 +1,5 @@
 // =====================================================================
-// CashG — Admin Dashboard
+// CashGee — Admin Dashboard
 //
 // Create login accounts, review payment proofs, and monitor yearly
 // yearly subscriptions. Talks to the same Supabase project as the app.
@@ -297,7 +297,7 @@ async function enterDashboard(user) {
 
     if (!profile || profile.role !== 'admin' || profile.status !== 'active') {
         await sb.auth.signOut();
-        showLogin('This account is not an admin. Use the CashG app to sign in as a user.');
+        showLogin('This account is not an admin. Use the CashGee app to sign in as a user.');
         return;
     }
 
@@ -811,7 +811,7 @@ async function submitNewAccount(event) {
 }
 
 function showCredentials(email, password, name) {
-    const message = `Hi ${name}! Your CashG account is ready.\nEmail: ${email}\nPassword: ${password}\nOpen the CashG app and sign in. You can change plans in the Subscription section.`;
+    const message = `Hi ${name}! Your CashGee account is ready.\nEmail: ${email}\nPassword: ${password}\nOpen the CashGee app and sign in. You can change plans in the Subscription section.`;
     openDialog('Account created', `
         <div class="success-box">
             ${icon('check')}

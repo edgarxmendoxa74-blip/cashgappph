@@ -1,5 +1,5 @@
 // =====================================================================
-// CashG — login, subscription and notifications (app side)
+// CashGee — login, subscription and notifications (app side)
 //
 // Flow: startAccount() → sign-in screen or enterAccount(user)
 //       → local inventory for that user + account data from Supabase.
@@ -176,7 +176,7 @@ function enterAccount(user) {
 }
 
 async function signOutAccount() {
-    if (!confirm('Sign out of CashG on this device?\n\nYour inventory stays saved here for when you sign in again.')) return;
+    if (!confirm('Sign out of CashGee on this device?\n\nYour inventory stays saved here for when you sign in again.')) return;
     // Leave first so the SIGNED_OUT event that follows finds no current user
     leaveAccount();
     try { await Cloud.signOut(); } catch { /* offline: local session is cleared anyway */ }
@@ -367,7 +367,7 @@ function renderSubscriptionBanner() {
         action = state.pending ? 'View' : 'Renew';
     } else if (state.status === 'none') {
         tone = 'info';
-        text = state.pending ? 'Payment under review. We\'ll notify you once approved.' : 'Subscribe to the Yearly plan to start using CashG.';
+        text = state.pending ? 'Payment under review. We\'ll notify you once approved.' : 'Subscribe to the Yearly plan to start using CashGee.';
         action = state.pending ? 'View' : 'Subscribe';
     }
 
@@ -709,7 +709,7 @@ async function handleGenerateReceipt() {
         document.getElementById('subReceiptImage').src = generatedReceipt.url;
         const download = document.getElementById('subReceiptDownload');
         download.href = generatedReceipt.url;
-        download.download = `CashG-Receipt-${receiptNo}.png`;
+        download.download = `CashGee-Receipt-${receiptNo}.png`;
         document.getElementById('subReceiptPreview').hidden = false;
         document.getElementById('subSubmit').disabled = false;
         document.getElementById('subSubmitNote').textContent =
@@ -845,7 +845,7 @@ function drawReceipt(ctx, r, logo, draw) {
         ctx.textBaseline = 'alphabetic';
         ctx.textAlign = 'left';
         ctx.font = font(800, 30);
-        ctx.fillText('CashG', textX, 66);
+        ctx.fillText('CashGee', textX, 66);
         ctx.font = font(500, 16);
         ctx.fillStyle = 'rgba(255,255,255,0.85)';
         ctx.fillText('Subscription Payment Receipt', textX, 92);
@@ -942,10 +942,10 @@ function drawReceipt(ctx, r, logo, draw) {
         ctx.textAlign = 'center';
         ctx.fillStyle = ink2;
         ctx.font = font(500, 14);
-        ctx.fillText('Your plan is activated once the CashG admin verifies this payment.', W / 2, y + 40);
+        ctx.fillText('Your plan is activated once the CashGee admin verifies this payment.', W / 2, y + 40);
         ctx.fillStyle = ink3;
         ctx.font = font(500, 13);
-        ctx.fillText(`Generated in the CashG app · ${r.receiptNo}`, W / 2, y + 64);
+        ctx.fillText(`Generated in the CashGee app · ${r.receiptNo}`, W / 2, y + 64);
     }
     y += 96;
 

@@ -1,5 +1,5 @@
 // =====================================================================
-// CashG — account & subscription data (Supabase)
+// CashGee — account & subscription data (Supabase)
 //
 // Everything the app needs from the server goes through `Cloud`.
 // Inventory records (transactions, customers, balances) stay on the

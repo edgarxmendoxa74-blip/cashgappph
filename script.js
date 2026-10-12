@@ -1451,7 +1451,7 @@ function importData() {
                     (Array.isArray(data.transactions) || Array.isArray(data.finance) || 'accounts' in data ||
                      'cash' in data || 'gcash' in data);
                 if (!looksValid) {
-                    showNotification('That file is not a CashG backup', 'error');
+                    showNotification('That file is not a CashGee backup', 'error');
                     return;
                 }
                 const count = Array.isArray(data.transactions) ? data.transactions.length : 0;
@@ -1707,7 +1707,7 @@ async function installApp() {
     if (isIOS()) {
         alert('To install on iPhone/iPad:\n\n1. Tap the Share button (square with arrow) in Safari\n2. Choose "Add to Home Screen"\n3. Tap "Add"');
     } else {
-        alert('To install CashG, open your browser menu (⋮) and choose "Install app" or "Add to Home screen".');
+        alert('To install CashGee, open your browser menu (⋮) and choose "Install app" or "Add to Home screen".');
     }
 }
 

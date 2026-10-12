@@ -1,8 +1,8 @@
 // =====================================================================
-// CashG — "How to use" walkthrough
+// CashGee — "How to use" walkthrough
 //
 // Shown once per account on each device, right after the first sign-in
-// (after the Welcome setup). Replay anytime: Settings → How to use CashG.
+// (after the Welcome setup). Replay anytime: Settings → How to use CashGee.
 // Each step spotlights part of the screen and explains it.
 // =====================================================================
 
@@ -14,7 +14,7 @@ const TOUR_MOBILE_QUERY = '(max-width: 768px)';
 const TOUR_STEPS = [
     {
         icon: 'home',
-        title: 'Welcome to CashG!',
+        title: 'Welcome to CashGee!',
         text: 'Let\'s take a quick tour so you know where everything is. It only takes a minute.'
     },
     {
@@ -55,7 +55,7 @@ const TOUR_STEPS = [
     {
         icon: 'check',
         title: 'You\'re all set!',
-        text: 'You can replay this tour anytime in <b>Settings → How to use CashG</b>.'
+        text: 'You can replay this tour anytime in <b>Settings → How to use CashGee</b>.'
     }
 ];
 
@@ -188,7 +188,7 @@ function goToTourStep(index) {
     const isLast = index === tourSteps.length - 1;
     tourEls.back.hidden = isFirst || isLast;
     tourEls.skip.hidden = isLast;
-    tourEls.next.textContent = isFirst ? 'Start Tour' : isLast ? 'Start Using CashG' : 'Next';
+    tourEls.next.textContent = isFirst ? 'Start Tour' : isLast ? 'Start Using CashGee' : 'Next';
 
     const target = step.target ? resolveTarget(step) : null;
     if (target) {
@@ -279,7 +279,7 @@ function endTour({ markDone = true } = {}) {
     window.scrollTo(0, 0);
 }
 
-// Settings → How to use CashG
+// Settings → How to use CashGee
 function replayTour() {
     startTour();
 }

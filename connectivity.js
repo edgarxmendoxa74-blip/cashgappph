@@ -1,5 +1,5 @@
 // =====================================================================
-// CashG — online / offline status
+// CashGee — online / offline status
 //
 // The inventory works fully offline (records live on the device).
 // Notifications, subscription updates and payments need the internet,
