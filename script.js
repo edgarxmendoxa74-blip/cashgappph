@@ -545,11 +545,15 @@ async function handleReceiptFile(input) {
     }
 }
 
-function viewReceipt(id) {
+async function viewReceipt(id) {
     const transaction = inventory.transactions.find(t => t.id === id);
     if (!transaction?.receipt) return;
-    // ImageKit receipts are served resized and optimised; older ones are on this device
-    document.getElementById('receiptImage').src = Cloud.imageUrl(transaction.receipt);
+    const ref = transaction.receipt;
+    // Photos saved on this phone load from storage; older ImageKit receipts are
+    // served resized and optimised; the oldest are data URLs inside the record
+    const src = ReceiptStore.isLocal(ref) ? await ReceiptStore.load(ref) : Cloud.imageUrl(ref);
+    if (!src) return showNotification('This receipt photo is no longer on this device', 'error');
+    document.getElementById('receiptImage').src = src;
     document.getElementById('receiptModal').classList.add('active');
 }
 
@@ -714,18 +718,16 @@ async function saveTransaction() {
         return;
     }
 
-    // Upload the receipt photo to ImageKit when online. If that is not possible,
-    // keep the small photo on this device instead.
+    // The receipt photo is kept on this phone (files in the app, IndexedDB in a browser).
+    // If that fails, fall back to the small data URL inside the transaction itself.
     let receipt = pendingReceipt;
     let savedNote = '';
-    if (pendingReceiptBlob && Cloud.canUploadReceipts()) {
+    if (pendingReceiptBlob) {
         savingTransaction = true;
-        showNotification('Uploading receipt…', 'info');
         try {
-            receipt = await Cloud.uploadReceipt(pendingReceiptBlob, `receipt-${Date.now()}.jpg`);
+            receipt = await ReceiptStore.save(pendingReceiptBlob);
         } catch (error) {
-            console.warn('Receipt upload failed, keeping it on this device', error);
-            savedNote = ' (receipt kept on this device)';
+            console.warn('Could not save the receipt to phone storage, keeping it inside the record', error);
         } finally {
             savingTransaction = false;
         }
@@ -759,6 +761,7 @@ async function saveTransaction() {
     let savedMessage = 'Transaction saved successfully!' + savedNote;
     if (!saveToLocalStorage() && record.receipt) {
         // Phone storage is full: keep the transaction, drop the photo
+        ReceiptStore.remove(record.receipt);
         delete record.receipt;
         savedMessage = 'Saved without the receipt photo (storage is full)';
     }
@@ -909,6 +912,7 @@ function deleteTransaction(id) {
     ACCOUNTS.forEach(a => { inventory.accounts[a.id] = round2(after[a.id]); });
     inventory.transactions = inventory.transactions.filter(t => t.id !== id);
     saveToLocalStorage();
+    if (transaction.receipt) ReceiptStore.remove(transaction.receipt);
     showNotification('Transaction deleted', 'success');
     updateAllBalances();
     loadTransactions();
@@ -1548,8 +1552,58 @@ function openMenuModal() {
     } catch { /* not signed in */ }
     set('menuPlan', plan);
     renderAvatar();
+    setMenuEditing(false);
     setSidebarOpen(false);
     document.getElementById('menuModal').classList.add('active');
+}
+
+function setMenuEditing(editing) {
+    document.getElementById('menuDetails').hidden = editing;
+    document.getElementById('menuEditForm').hidden = !editing;
+    document.getElementById('menuEditBtn').hidden = editing;
+}
+
+function menuEditProfile() {
+    const profile = (typeof account !== 'undefined' && account?.profile) || {};
+    document.getElementById('menuEditName').value = profile.full_name || '';
+    document.getElementById('menuEditPhone').value = profile.phone || '';
+    document.getElementById('menuEditBusiness').value =
+        inventory.settings.businessName || profile.business_name || '';
+    setMenuEditing(true);
+    document.getElementById('menuEditName').focus();
+}
+
+function menuCancelEdit() {
+    setMenuEditing(false);
+}
+
+async function menuSaveProfile(event) {
+    event.preventDefault();
+    const fullName = document.getElementById('menuEditName').value.trim();
+    const phone = document.getElementById('menuEditPhone').value.trim();
+    const businessName = document.getElementById('menuEditBusiness').value.trim();
+    if (!fullName) return showNotification('Please enter your name', 'error');
+
+    const button = document.getElementById('menuSaveBtn');
+    button.disabled = true;
+    try {
+        await Cloud.updateProfile({ fullName, phone, businessName });
+        if (account?.profile) {
+            account.profile.full_name = fullName;
+            account.profile.phone = phone;
+            account.profile.business_name = businessName;
+        }
+        inventory.settings.businessName = businessName;
+        saveToLocalStorage();
+        updateBusinessName();
+        openMenuModal(); // re-render the details with the new values
+        setMenuEditing(false);
+        showNotification('Profile updated', 'success');
+    } catch (error) {
+        showNotification(navigator.onLine ? 'Could not save your profile. Please try again.' : 'You are offline. Connect to the internet to edit your profile.', 'error');
+    } finally {
+        button.disabled = false;
+    }
 }
 
 function menuGoTo(page) {
@@ -1565,6 +1619,9 @@ function menuResetData() {
 function clearAllData() {
     if (!confirm('Are you sure you want to clear all data? This cannot be undone!')) return;
     
+    // Free the photos saved on this phone for the transactions being cleared
+    ReceiptStore.removeMany(inventory.transactions.map(t => t.receipt).filter(Boolean));
+
     inventory = createEmptyInventory();
     const key = inventoryStorageKey();
     if (key) localStorage.removeItem(key);

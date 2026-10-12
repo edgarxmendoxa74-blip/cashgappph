@@ -170,6 +170,14 @@ const Cloud = (() => {
             }).select().single());
         },
 
+        async updateProfile({ fullName, phone, businessName }) {
+            unwrap(await client.rpc('update_my_profile', {
+                p_full_name: fullName,
+                p_phone: phone,
+                p_business_name: businessName
+            }));
+        },
+
         async markNotificationsRead() {
             unwrap(await client.rpc('mark_notifications_read', { p_ids: null }));
         }

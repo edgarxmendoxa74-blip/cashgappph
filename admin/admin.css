@@ -1192,3 +1192,14 @@ input:focus, select:focus, textarea:focus {
 @media (max-width: 520px) {
     .kind-picker { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* Payment method boxes in Settings */
+.method-box { border: 1px solid #e5e7eb; border-radius: 12px; padding: 14px; margin-bottom: 16px; }
+.method-box > h2 { margin-top: 0; }
+.avail-toggle { display: flex; align-items: center; gap: 10px; font-weight: 600; margin-bottom: 12px; cursor: pointer; }
+.avail-toggle input { width: 20px; height: 20px; }
+.qr-upload { display: flex; align-items: center; gap: 14px; margin-top: 4px; }
+.qr-preview { width: 96px; height: 96px; object-fit: contain; border: 1px solid #e5e7eb; border-radius: 8px; background: #fff; }
+.qr-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.qr-label { width: 100%; font-weight: 600; font-size: 13px; }
+.qr-label em { font-style: normal; font-weight: 500; opacity: .6; }

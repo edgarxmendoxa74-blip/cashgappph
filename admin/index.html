@@ -267,16 +267,42 @@
                     </div>
 
                     <h2>Where users send payment</h2>
-                    <div class="grid-2">
-                        <label class="field"><span>GCash account name</span><input type="text" id="setPayName" placeholder="e.g. JUAN D."></label>
-                        <label class="field"><span>GCash number</span><input type="tel" id="setPayNumber" placeholder="09XX XXX XXXX"></label>
+                    <div class="method-box">
+                        <label class="avail-toggle"><input type="checkbox" id="setGcashEnabled"><span>GCash is available now</span></label>
+                        <div class="grid-2">
+                            <label class="field"><span>GCash account name</span><input type="text" id="setPayName" placeholder="e.g. JUAN D."></label>
+                            <label class="field"><span>GCash number</span><input type="tel" id="setPayNumber" placeholder="09XX XXX XXXX"></label>
+                        </div>
+                        <div class="qr-upload" data-qr="gcash">
+                            <img class="qr-preview" alt="GCash QR" hidden>
+                            <div class="qr-actions">
+                                <span class="qr-label">GCash QR / image <em>optional</em></span>
+                                <input type="file" accept="image/*" class="qr-file" hidden>
+                                <button type="button" class="btn btn-ghost qr-pick">Upload image</button>
+                                <button type="button" class="btn btn-ghost qr-remove" hidden>Remove</button>
+                            </div>
+                        </div>
                     </div>
-                    <h2>Bank transfer <em class="muted small">leave blank to offer GCash only</em></h2>
-                    <div class="grid-2">
-                        <label class="field"><span>Bank</span><input type="text" id="setBankName" placeholder="e.g. BDO"></label>
-                        <label class="field"><span>Account name</span><input type="text" id="setBankAccountName" placeholder="e.g. JUAN DELA CRUZ"></label>
+
+                    <div class="method-box">
+                        <h2>Bank transfer</h2>
+                        <label class="avail-toggle"><input type="checkbox" id="setBankEnabled"><span>Bank transfer is available now</span></label>
+                        <p class="muted small">Fill in the bank details or upload a QR image to offer bank transfer. Untick the box to offer GCash only.</p>
+                        <div class="grid-2">
+                            <label class="field"><span>Bank</span><input type="text" id="setBankName" placeholder="e.g. BDO"></label>
+                            <label class="field"><span>Account name</span><input type="text" id="setBankAccountName" placeholder="e.g. JUAN DELA CRUZ"></label>
+                        </div>
+                        <label class="field"><span>Account number</span><input type="text" id="setBankAccountNumber" inputmode="numeric" placeholder="e.g. 0012 3456 7890"></label>
+                        <div class="qr-upload" data-qr="bank">
+                            <img class="qr-preview" alt="Bank QR" hidden>
+                            <div class="qr-actions">
+                                <span class="qr-label">Bank QR / image <em>optional</em></span>
+                                <input type="file" accept="image/*" class="qr-file" hidden>
+                                <button type="button" class="btn btn-ghost qr-pick">Upload image</button>
+                                <button type="button" class="btn btn-ghost qr-remove" hidden>Remove</button>
+                            </div>
+                        </div>
                     </div>
-                    <label class="field"><span>Account number</span><input type="text" id="setBankAccountNumber" inputmode="numeric" placeholder="e.g. 0012 3456 7890"></label>
 
                     <label class="field"><span>Extra instructions <em>optional</em></span><textarea id="setPayInstructions" rows="3" placeholder="e.g. Put your email in the GCash message."></textarea></label>
 

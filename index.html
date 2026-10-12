@@ -527,6 +527,12 @@
                                     </div>
                                 </div>
                                 <div class="pay-box-rows" id="subPayRows"></div>
+                                <div class="pay-qr" id="subPayQr" hidden>
+                                    <img id="subPayQrImg" alt="Payment QR code">
+                                    <button type="button" class="btn btn-secondary pay-qr-enlarge" onclick="openQrViewer()">
+                                        <svg class="icon"><use href="#i-search"/></svg> Enlarge QR
+                                    </button>
+                                </div>
                                 <p class="pay-box-note" id="subPayInstructions" hidden></p>
                             </div>
 
@@ -829,12 +835,28 @@
 
                 <button type="button" class="menu-remove-photo" id="menuRemovePhoto" onclick="removeAvatar()" hidden>Remove photo</button>
 
-                <div class="menu-section-label">Owner details</div>
-                <dl class="menu-details">
+                <div class="menu-section-label menu-section-head">
+                    <span>Owner details</span>
+                    <button type="button" class="menu-edit-btn" id="menuEditBtn" onclick="menuEditProfile()">Edit</button>
+                </div>
+                <dl class="menu-details" id="menuDetails">
                     <div><dt><svg class="icon"><use href="#i-mail"/></svg>Email</dt><dd id="menuEmail">—</dd></div>
                     <div><dt><svg class="icon"><use href="#i-phone"/></svg>Phone</dt><dd id="menuPhone">—</dd></div>
                     <div><dt><svg class="icon"><use href="#i-store"/></svg>Business</dt><dd id="menuBusinessName">—</dd></div>
                 </dl>
+                <form class="menu-edit-form" id="menuEditForm" hidden onsubmit="menuSaveProfile(event)">
+                    <label for="menuEditName">Full name</label>
+                    <input type="text" id="menuEditName" maxlength="120" autocomplete="name">
+                    <label for="menuEditPhone">Phone</label>
+                    <input type="tel" id="menuEditPhone" maxlength="40" autocomplete="tel">
+                    <label for="menuEditBusiness">Business name</label>
+                    <input type="text" id="menuEditBusiness" maxlength="120" autocomplete="organization">
+                    <p class="menu-edit-note">Your email is your login and can't be changed here.</p>
+                    <div class="menu-edit-actions">
+                        <button type="button" class="btn btn-secondary" onclick="menuCancelEdit()">Cancel</button>
+                        <button type="submit" class="btn btn-primary" id="menuSaveBtn">Save</button>
+                    </div>
+                </form>
 
                 <div class="menu-section-label">Manage</div>
 
@@ -844,14 +866,32 @@
                         <span class="menu-row-text">Subscription</span>
                         <svg class="icon menu-row-chevron"><use href="#i-chevron"/></svg>
                     </button>
+                    <button type="button" class="menu-row" onclick="closeModal('menuModal'); replayTour()">
+                        <span class="menu-row-icon"><svg class="icon"><use href="#i-info"/></svg></span>
+                        <span class="menu-row-text">How to use CashG</span>
+                        <svg class="icon menu-row-chevron"><use href="#i-chevron"/></svg>
+                    </button>
                     <button type="button" class="menu-row is-danger" onclick="menuResetData()">
                         <span class="menu-row-icon"><svg class="icon"><use href="#i-trash"/></svg></span>
                         <span class="menu-row-text">Reset data</span>
                         <svg class="icon menu-row-chevron"><use href="#i-chevron"/></svg>
                     </button>
+                    <button type="button" class="menu-row is-danger" onclick="closeModal('menuModal'); signOutAccount()">
+                        <span class="menu-row-icon"><svg class="icon"><use href="#i-logout"/></svg></span>
+                        <span class="menu-row-text">Log out</span>
+                        <svg class="icon menu-row-chevron"><use href="#i-chevron"/></svg>
+                    </button>
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- Payment QR viewer -->
+    <div class="qr-viewer" id="qrViewer" hidden onclick="closeQrViewer()">
+        <button type="button" class="qr-viewer-close" onclick="closeQrViewer()" aria-label="Close">
+            <svg class="icon"><use href="#i-x"/></svg>
+        </button>
+        <img id="qrViewerImg" alt="Payment QR code" onclick="event.stopPropagation()">
     </div>
 
     <!-- Calendar Modal -->
@@ -1076,6 +1116,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config.js"></script>
     <script src="cloud.js"></script>
+    <script src="receiptstore.js"></script>
     <script src="script.js"></script>
     <script src="account.js"></script>
     <script src="tour.js"></script>

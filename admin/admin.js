@@ -639,6 +639,50 @@ function renderSettings() {
     $('setBankName').value = s.payment_bank_name || '';
     $('setBankAccountName').value = s.payment_bank_account_name || '';
     $('setBankAccountNumber').value = s.payment_bank_account_number || '';
+    $('setGcashEnabled').checked = s.payment_gcash_enabled !== false;
+    $('setBankEnabled').checked = s.payment_bank_enabled !== false;
+    qrUrls.gcash = s.payment_gcash_qr_url || '';
+    qrUrls.bank = s.payment_bank_qr_url || '';
+    renderQr('gcash');
+    renderQr('bank');
+}
+
+// Payment QR / instruction images, uploaded to ImageKit through the same
+// signed-upload Edge Function the user receipts use.
+const qrUrls = { gcash: '', bank: '' };
+
+function renderQr(kind) {
+    const box = document.querySelector(`.qr-upload[data-qr="${kind}"]`);
+    const img = box.querySelector('.qr-preview');
+    img.hidden = !qrUrls[kind];
+    if (qrUrls[kind]) img.src = qrUrls[kind];
+    box.querySelector('.qr-pick').textContent = qrUrls[kind] ? 'Replace image' : 'Upload image';
+    box.querySelector('.qr-remove').hidden = !qrUrls[kind];
+}
+
+async function uploadQr(kind, file) {
+    if (file.size > 5 * 1024 * 1024) return toast('Image must be under 5 MB.', 'error');
+    const ext = (file.name.match(/\.(png|jpe?g|webp|gif)$/i)?.[1] || '').toLowerCase();
+    if (!ext) return toast('Please choose a PNG, JPG, WebP or GIF image.', 'error');
+    const pick = document.querySelector(`.qr-upload[data-qr="${kind}"] .qr-pick`);
+    pick.disabled = true;
+    pick.textContent = 'Uploading…';
+    try {
+        // Public bucket: customers need to see these on the payment screen
+        const path = `${kind}-${Date.now()}.${ext}`;
+        const { error } = await sb.storage.from('payment-qr').upload(path, file, {
+            contentType: file.type || `image/${ext === 'jpg' ? 'jpeg' : ext}`,
+            cacheControl: '3600',
+        });
+        if (error) throw error;
+        qrUrls[kind] = sb.storage.from('payment-qr').getPublicUrl(path).data.publicUrl;
+        toast('Image uploaded. Press Save Settings to apply.');
+    } catch (error) {
+        toast(errorText(error), 'error');
+    } finally {
+        pick.disabled = false;
+        renderQr(kind);
+    }
 }
 
 function showView(view) {
@@ -1051,6 +1095,10 @@ async function saveSettings(event) {
             payment_bank_name: $('setBankName').value.trim(),
             payment_bank_account_name: $('setBankAccountName').value.trim(),
             payment_bank_account_number: $('setBankAccountNumber').value.trim(),
+            payment_gcash_enabled: $('setGcashEnabled').checked,
+            payment_bank_enabled: $('setBankEnabled').checked,
+            payment_gcash_qr_url: qrUrls.gcash,
+            payment_bank_qr_url: qrUrls.bank,
             updated_at: new Date().toISOString()
         }).eq('id', 1));
         toast('Settings saved.');
@@ -1110,6 +1158,17 @@ function wireEvents() {
     });
     wireChips('accountFilter', 'accountFilter', renderAccounts);
     wireChips('paymentFilter', 'paymentFilter', renderPayments);
+    document.querySelectorAll('.qr-upload').forEach(box => {
+        const kind = box.dataset.qr;
+        const input = box.querySelector('.qr-file');
+        box.querySelector('.qr-pick').addEventListener('click', () => input.click());
+        box.querySelector('.qr-remove').addEventListener('click', () => { qrUrls[kind] = ''; renderQr(kind); });
+        input.addEventListener('change', () => {
+            const file = input.files[0];
+            input.value = '';
+            if (file) uploadQr(kind, file);
+        });
+    });
     wireChips('subPlanFilter', 'subPlanFilter', renderSubscriptions);
     wireChips('subStatusFilter', 'subStatusFilter', renderSubscriptions);
 

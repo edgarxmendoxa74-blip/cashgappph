@@ -359,6 +359,24 @@ as $$
       and (p_ids is null or id = any (p_ids));
 $$;
 
+-- Users edit their own name, phone and business name (never role or status)
+create or replace function public.update_my_profile(
+    p_full_name text, p_phone text, p_business_name text)
+returns void
+language sql
+security definer
+set search_path = public
+as $$
+    update public.profiles
+    set full_name     = left(btrim(coalesce(p_full_name, '')), 120),
+        phone         = left(btrim(coalesce(p_phone, '')), 40),
+        business_name = left(btrim(coalesce(p_business_name, '')), 120)
+    where id = auth.uid();
+$$;
+
+revoke all on function public.update_my_profile(text, text, text) from public, anon;
+grant execute on function public.update_my_profile(text, text, text) to authenticated;
+
 -- ---------------------------------------------------------------------
 -- Row level security
 -- ---------------------------------------------------------------------
@@ -427,6 +445,30 @@ create policy "proofs: read own or admin" on storage.objects
     for select to authenticated
     using (bucket_id = 'payment-proofs'
            and ((storage.foldername(name))[1] = auth.uid()::text or public.is_admin()));
+
+-- ---------------------------------------------------------------------
+-- Payment QR images (public bucket, only admins can write)
+-- ---------------------------------------------------------------------
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('payment-qr', 'payment-qr', true, 5242880,
+        array['image/png', 'image/jpeg', 'image/webp', 'image/gif'])
+on conflict (id) do update
+    set public = true, file_size_limit = 5242880,
+        allowed_mime_types = array['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
+
+drop policy if exists "qr: admin upload" on storage.objects;
+drop policy if exists "qr: admin update" on storage.objects;
+drop policy if exists "qr: admin delete" on storage.objects;
+create policy "qr: admin upload" on storage.objects
+    for insert to authenticated
+    with check (bucket_id = 'payment-qr' and public.is_admin());
+create policy "qr: admin update" on storage.objects
+    for update to authenticated
+    using (bucket_id = 'payment-qr' and public.is_admin());
+create policy "qr: admin delete" on storage.objects
+    for delete to authenticated
+    using (bucket_id = 'payment-qr' and public.is_admin());
 
 -- ---------------------------------------------------------------------
 -- Announcements (Admin → Notifications)
@@ -550,6 +592,12 @@ alter table public.app_settings
     add column if not exists payment_bank_name           text not null default '',
     add column if not exists payment_bank_account_name   text not null default '',
     add column if not exists payment_bank_account_number text not null default '';
+
+alter table public.app_settings
+    add column if not exists payment_gcash_enabled boolean not null default true,
+    add column if not exists payment_gcash_qr_url  text    not null default '',
+    add column if not exists payment_bank_enabled  boolean not null default true,
+    add column if not exists payment_bank_qr_url   text    not null default '';
 
 alter table public.subscription_requests
     add column if not exists payment_method text not null default 'gcash',

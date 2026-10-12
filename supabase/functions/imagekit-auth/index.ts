@@ -42,9 +42,13 @@ Deno.serve(async (req) => {
 
     const url = Deno.env.get('SUPABASE_URL');
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    const privateKey = Deno.env.get('IMAGEKIT_PRIVATE_KEY');
+    const privateKey = Deno.env.get('IMAGEKIT_PRIVATE_KEY')?.trim().replace(/^["']|["']$/g, '');
     if (!url || !serviceKey) return json({ error: 'Function is missing its Supabase keys.' }, 500);
     if (!privateKey) return json({ error: 'Receipt uploads are not set up yet (IMAGEKIT_PRIVATE_KEY).' }, 500);
+
+    if (!privateKey.startsWith('private_')) {
+        return json({ error: 'IMAGEKIT_PRIVATE_KEY is not a private key (it must start with "private_"). Re-enter it in Supabase secrets.' }, 500);
+    }
 
     const admin = createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
 

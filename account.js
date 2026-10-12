@@ -487,16 +487,21 @@ function paymentDestination(method) {
     const s = account?.settings || {};
     if (method === 'bank') {
         return {
-            available: Boolean(s.payment_bank_name && s.payment_bank_account_number),
+            // Bank details or a QR image is enough to offer bank transfer
+            available: s.payment_bank_enabled !== false &&
+                Boolean((s.payment_bank_name && s.payment_bank_account_number) || s.payment_bank_qr_url),
+            qr: s.payment_bank_qr_url || '',
+            // Skip blank details so a QR-only bank doesn't show empty rows
             rows: [
-                ['Bank', s.payment_bank_name || '—'],
-                ['Account name', s.payment_bank_account_name || '—'],
-                ['Account number', s.payment_bank_account_number || '—']
-            ]
+                ['Bank', s.payment_bank_name],
+                ['Account name', s.payment_bank_account_name],
+                ['Account number', s.payment_bank_account_number]
+            ].filter(([, value]) => value)
         };
     }
     return {
-        available: true,
+        available: s.payment_gcash_enabled !== false,
+        qr: s.payment_gcash_qr_url || '',
         rows: [
             ['Account name', s.payment_gcash_name || 'Ask the admin for the GCash name'],
             ['GCash number', s.payment_gcash_number || '—']
@@ -509,8 +514,14 @@ function renderPaymentMethod() {
     const bankAvailable = paymentDestination('bank').available;
     bankOption.disabled = !bankAvailable;
     bankOption.closest('.method-option').querySelector('small').textContent =
-        bankAvailable ? 'InstaPay / PESONet' : 'Not available yet';
+        bankAvailable ? 'InstaPay / PESONet' : 'Not available now';
+    const gcashOption = document.querySelector('#subForm input[name="method"][value="gcash"]');
+    const gcashAvailable = paymentDestination('gcash').available;
+    gcashOption.disabled = !gcashAvailable;
+    gcashOption.closest('.method-option').querySelector('small').textContent =
+        gcashAvailable ? 'E-wallet' : 'Not available now';
     if (selectedMethod === 'bank' && !bankAvailable) selectedMethod = null;
+    if (selectedMethod === 'gcash' && !gcashAvailable) selectedMethod = null;
 
     document.querySelectorAll('#subForm input[name="method"]').forEach(input => {
         input.checked = input.value === selectedMethod;
@@ -525,9 +536,12 @@ function renderPaymentMethod() {
     document.getElementById('subPayTitle').textContent = isBank ? 'Send via bank transfer' : 'Send via GCash';
     document.getElementById('subPayIcon').innerHTML = `<use href="#i-${isBank ? 'store' : 'phone-device'}"/>`;
     document.getElementById('subPayAmount').textContent = peso(amount);
-    document.getElementById('subPayRows').innerHTML = paymentDestination(selectedMethod).rows
+    const destination = paymentDestination(selectedMethod);
+    document.getElementById('subPayRows').innerHTML = destination.rows
         .map(([label, value]) => `<div><span>${label}</span><strong>${escapeHtml(value)}</strong></div>`)
         .join('');
+    document.getElementById('subPayQr').hidden = !destination.qr;
+    if (destination.qr) document.getElementById('subPayQrImg').src = destination.qr;
 
     const s = account.settings || {};
     const instructions = document.getElementById('subPayInstructions');
@@ -541,6 +555,21 @@ function renderPaymentMethod() {
     document.getElementById('subReferenceLabel').textContent = isBank ? 'Bank Reference / Trace No.' : 'GCash Reference No.';
     document.getElementById('subReference').placeholder = isBank ? 'Reference number on your transfer' : '13-digit reference number';
 }
+
+function openQrViewer() {
+    const src = document.getElementById('subPayQrImg').src;
+    if (!src) return;
+    document.getElementById('qrViewerImg').src = src;
+    document.getElementById('qrViewer').hidden = false;
+}
+
+function closeQrViewer() {
+    document.getElementById('qrViewer').hidden = true;
+}
+
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeQrViewer();
+});
 
 function selectPaymentMethod(method) {
     if (method === selectedMethod) return;

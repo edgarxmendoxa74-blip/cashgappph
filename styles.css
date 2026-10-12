@@ -6491,6 +6491,69 @@ body.auth-open {
     display: none;
 }
 
+.pay-qr {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.625rem;
+    margin-top: 0.875rem;
+}
+
+.pay-qr[hidden] {
+    display: none;
+}
+
+.pay-qr img {
+    display: block;
+    width: 100%;
+    max-width: 220px;
+    border-radius: 12px;
+    background: #fff;
+}
+
+.pay-qr-enlarge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.qr-viewer {
+    position: fixed;
+    inset: 0;
+    z-index: 5000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.25rem;
+    background: rgba(0, 0, 0, 0.82);
+}
+
+.qr-viewer[hidden] {
+    display: none;
+}
+
+.qr-viewer img {
+    max-width: min(92vw, 520px);
+    max-height: 82vh;
+    border-radius: 14px;
+    background: #fff;
+}
+
+.qr-viewer-close {
+    position: absolute;
+    top: max(1rem, env(safe-area-inset-top));
+    right: 1rem;
+    width: 44px;
+    height: 44px;
+    display: grid;
+    place-items: center;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.18);
+    color: #fff;
+    cursor: pointer;
+}
+
 .sub-form-step {
     margin: 1.375rem 0 0.75rem;
     font-size: 0.8125rem;
