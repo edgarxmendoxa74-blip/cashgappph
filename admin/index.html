@@ -2,6 +2,17 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <!-- Opening /admin without the trailing slash would resolve admin.css, admin.js and ../config.js from the wrong folder -->
+    <script>
+        (function () {
+            var p = location.pathname;
+            if (/\/admin$/.test(p)) {
+                var b = document.createElement('base');
+                b.href = p + '/';
+                document.head.appendChild(b);
+            }
+        })();
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow">
     <meta name="theme-color" content="#03955f">
