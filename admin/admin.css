@@ -266,6 +266,111 @@ input:focus, select:focus, textarea:focus {
     text-align: center;
 }
 
+.input-with-action {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.input-with-action input {
+    padding-right: 2.75rem;
+}
+
+.input-with-action .input-action {
+    position: absolute;
+    right: 0.35rem;
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    border: none;
+    border-radius: 8px;
+    background: none;
+    color: var(--ink-3);
+    cursor: pointer;
+}
+
+.input-with-action .input-action:hover {
+    color: var(--brand);
+    background: var(--surface-2);
+}
+
+.input-with-action .input-action .icon {
+    width: 17px;
+    height: 17px;
+}
+
+.input-with-action .input-action .icon-eye-off,
+.input-with-action .input-action.is-showing .icon-eye {
+    display: none;
+}
+
+.input-with-action .input-action.is-showing .icon-eye-off {
+    display: block;
+}
+
+.login-options {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin: -0.25rem 0 1.25rem;
+    font-size: 0.8125rem;
+}
+
+.login-remember {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    user-select: none;
+    color: var(--ink-2);
+    font-weight: 500;
+}
+
+.login-remember input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    min-height: auto;
+    accent-color: var(--brand, #03955f);
+    cursor: pointer;
+    border-radius: 4px;
+    margin: 0;
+}
+
+.login-remember:hover {
+    color: var(--ink);
+}
+
+.login-clear-saved {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    border: none;
+    background: none;
+    color: var(--red, #ef4444);
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.login-clear-saved:hover {
+    background: var(--red-50, #fef2f2);
+    color: #b91c1c;
+}
+
+.login-clear-saved .icon {
+    width: 13px;
+    height: 13px;
+}
+
+.login-clear-saved[hidden] {
+    display: none;
+}
+
 /* ---------- Shell ---------- */
 .shell {
     display: grid;

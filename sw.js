@@ -3,7 +3,7 @@
 // Bump CACHE_VERSION whenever app files change so users get the update.
 // ===================================
 
-const CACHE_VERSION = 'v67';
+const CACHE_VERSION = 'v68';
 const APP_CACHE = `cashg-app-${CACHE_VERSION}`;
 const FONT_CACHE = 'cashg-fonts';
 const LIB_CACHE = 'cashg-libs';

@@ -230,6 +230,78 @@ function emptyRow(cols, text) {
 // Sign in / out
 // ---------------------------------------------------------------------
 
+const SAVED_LOGIN_KEY = 'cashg-admin-saved-login';
+
+function loadSavedCredentials() {
+    try {
+        const raw = localStorage.getItem(SAVED_LOGIN_KEY);
+        if (!raw) return null;
+        let parsed;
+        try {
+            parsed = JSON.parse(decodeURIComponent(escape(atob(raw))));
+        } catch {
+            parsed = JSON.parse(raw);
+        }
+        if (parsed && typeof parsed.email === 'string' && typeof parsed.password === 'string') {
+            return parsed;
+        }
+    } catch { /* ignore corrupted */ }
+    return null;
+}
+
+function storeSavedCredentials(email, password) {
+    try {
+        const payload = JSON.stringify({ email, password, savedAt: Date.now() });
+        const encoded = btoa(unescape(encodeURIComponent(payload)));
+        localStorage.setItem(SAVED_LOGIN_KEY, encoded);
+    } catch { /* storage full or blocked */ }
+}
+
+function clearSavedCredentials() {
+    try {
+        localStorage.removeItem(SAVED_LOGIN_KEY);
+    } catch { /* ignore */ }
+}
+
+function populateSavedCredentials() {
+    const emailInput = $('loginEmail');
+    const passInput = $('loginPassword');
+    const rememberBox = $('loginRemember');
+    const clearBtn = $('loginClearSaved');
+    if (!emailInput || !passInput || !rememberBox) return;
+
+    const saved = loadSavedCredentials();
+    if (saved?.email && saved?.password) {
+        emailInput.value = saved.email;
+        passInput.value = saved.password;
+        rememberBox.checked = true;
+        if (clearBtn) clearBtn.hidden = false;
+    } else {
+        rememberBox.checked = false;
+        if (clearBtn) clearBtn.hidden = true;
+    }
+}
+
+function handleClearSavedPassword() {
+    clearSavedCredentials();
+    const passInput = $('loginPassword');
+    const rememberBox = $('loginRemember');
+    const clearBtn = $('loginClearSaved');
+    if (passInput) passInput.value = '';
+    if (rememberBox) rememberBox.checked = false;
+    if (clearBtn) clearBtn.hidden = true;
+    if (passInput) passInput.focus();
+}
+
+function togglePasswordVisibility() {
+    const input = $('loginPassword');
+    if (!input) return;
+    const showing = input.type === 'text';
+    input.type = showing ? 'password' : 'text';
+    this.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
+    this.classList.toggle('is-showing', !showing);
+}
+
 async function init() {
     wireEvents();
 
@@ -260,6 +332,18 @@ function showLogin(message = '') {
     $('loginScreen').hidden = false;
     $('loginError').textContent = message;
     $('loginError').hidden = !message;
+    populateSavedCredentials();
+    setTimeout(() => {
+        const emailInput = $('loginEmail');
+        const passInput = $('loginPassword');
+        if (emailInput?.value && passInput?.value) {
+            $('loginSubmit')?.focus();
+        } else if (emailInput?.value && passInput) {
+            passInput.focus();
+        } else if (emailInput) {
+            emailInput.focus();
+        }
+    }, 50);
 }
 
 async function handleLogin(event) {
@@ -267,6 +351,7 @@ async function handleLogin(event) {
     const email = $('loginEmail').value.trim();
     const password = $('loginPassword').value;
     const button = $('loginSubmit');
+    const remember = $('loginRemember')?.checked;
 
     if (!email || !password) {
         showLogin('Enter your email and password.');
@@ -277,6 +362,11 @@ async function handleLogin(event) {
     try {
         const { data, error } = await sb.auth.signInWithPassword({ email, password });
         if (error) throw error;
+        if (remember) {
+            storeSavedCredentials(email, password);
+        } else {
+            clearSavedCredentials();
+        }
         $('loginPassword').value = '';
         await enterDashboard(data.user);
     } catch (error) {
@@ -1126,6 +1216,8 @@ function wireChips(containerId, key, render) {
 
 function wireEvents() {
     $('loginForm').addEventListener('submit', handleLogin);
+    $('loginPasswordToggle')?.addEventListener('click', togglePasswordVisibility);
+    $('loginClearSaved')?.addEventListener('click', handleClearSavedPassword);
     $('signOutBtn').addEventListener('click', signOut);
     $('refreshBtn').addEventListener('click', () => loadAll());
     $('newAccountBtn').addEventListener('click', openNewAccount);

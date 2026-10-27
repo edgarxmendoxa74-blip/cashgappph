@@ -7,6 +7,7 @@
 // =====================================================================
 
 const LAST_USER_KEY = 'cashg-last-user';
+const SAVED_LOGIN_KEY = 'cashg-saved-login';
 const ACCOUNT_CACHE_PREFIX = 'cashg-account:';
 const REMINDER_SEEN_PREFIX = 'cashg-reminder-seen:';
 const ACCOUNT_REFRESH_MS = 60000;
@@ -33,6 +34,67 @@ function writeJson(key, value) {
     try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* storage full or blocked */ }
 }
 
+function loadSavedCredentials() {
+    try {
+        const raw = localStorage.getItem(SAVED_LOGIN_KEY);
+        if (!raw) return null;
+        let parsed;
+        try {
+            parsed = JSON.parse(decodeURIComponent(escape(atob(raw))));
+        } catch {
+            parsed = JSON.parse(raw);
+        }
+        if (parsed && typeof parsed.email === 'string' && typeof parsed.password === 'string') {
+            return parsed;
+        }
+    } catch { /* ignore corrupted */ }
+    return null;
+}
+
+function storeSavedCredentials(email, password) {
+    try {
+        const payload = JSON.stringify({ email, password, savedAt: Date.now() });
+        const encoded = btoa(unescape(encodeURIComponent(payload)));
+        localStorage.setItem(SAVED_LOGIN_KEY, encoded);
+    } catch { /* storage full or blocked */ }
+}
+
+function clearSavedCredentials() {
+    try {
+        localStorage.removeItem(SAVED_LOGIN_KEY);
+    } catch { /* ignore */ }
+}
+
+function populateSavedCredentials() {
+    const emailInput = document.getElementById('loginEmail');
+    const passInput = document.getElementById('loginPassword');
+    const rememberBox = document.getElementById('loginRemember');
+    const clearBtn = document.getElementById('loginClearSaved');
+    if (!emailInput || !passInput || !rememberBox) return;
+
+    const saved = loadSavedCredentials();
+    if (saved?.email && saved?.password) {
+        emailInput.value = saved.email;
+        passInput.value = saved.password;
+        rememberBox.checked = true;
+        if (clearBtn) clearBtn.hidden = false;
+    } else {
+        rememberBox.checked = false;
+        if (clearBtn) clearBtn.hidden = true;
+    }
+}
+
+function handleClearSavedPassword() {
+    clearSavedCredentials();
+    const passInput = document.getElementById('loginPassword');
+    const rememberBox = document.getElementById('loginRemember');
+    const clearBtn = document.getElementById('loginClearSaved');
+    if (passInput) passInput.value = '';
+    if (rememberBox) rememberBox.checked = false;
+    if (clearBtn) clearBtn.hidden = true;
+    if (passInput) passInput.focus();
+}
+
 // Each account keeps its own inventory on this device
 function inventoryStorageKey() {
     return currentUser ? `cashg-inventory:${currentUser.id}` : null;
@@ -45,6 +107,7 @@ function inventoryStorageKey() {
 async function startAccount() {
     document.getElementById('loginForm').addEventListener('submit', handleLogin);
     document.getElementById('loginPasswordToggle').addEventListener('click', togglePasswordVisibility);
+    document.getElementById('loginClearSaved')?.addEventListener('click', handleClearSavedPassword);
     const subForm = document.getElementById('subForm');
     subForm.addEventListener('submit', handleSubscriptionSubmit);
     subForm.addEventListener('change', event => {
@@ -105,7 +168,20 @@ function showAuthScreen({ notConfigured = false, message = '' } = {}) {
     setLoginError(message);
     screen.hidden = false;
     document.body.classList.add('auth-open');
-    if (!notConfigured) setTimeout(() => document.getElementById('loginEmail').focus(), 50);
+    if (!notConfigured) {
+        populateSavedCredentials();
+        setTimeout(() => {
+            const emailInput = document.getElementById('loginEmail');
+            const passInput = document.getElementById('loginPassword');
+            if (emailInput?.value && passInput?.value) {
+                document.getElementById('loginSubmit')?.focus();
+            } else if (emailInput?.value && passInput) {
+                passInput.focus();
+            } else if (emailInput) {
+                emailInput.focus();
+            }
+        }, 50);
+    }
 }
 
 function hideAuthScreen() {
@@ -132,6 +208,7 @@ async function handleLogin(event) {
     const email = document.getElementById('loginEmail').value.trim();
     const password = document.getElementById('loginPassword').value;
     const button = document.getElementById('loginSubmit');
+    const remember = document.getElementById('loginRemember')?.checked;
 
     if (!email || !password) {
         setLoginError('Enter your email and password.');
@@ -148,6 +225,11 @@ async function handleLogin(event) {
 
     try {
         const user = await Cloud.signIn(email, password);
+        if (remember) {
+            storeSavedCredentials(email, password);
+        } else {
+            clearSavedCredentials();
+        }
         document.getElementById('loginPassword').value = '';
         enterAccount({ id: user.id, email: user.email });
     } catch (error) {

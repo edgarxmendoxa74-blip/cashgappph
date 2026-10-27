@@ -5823,6 +5823,67 @@ body.auth-open {
     display: block;
 }
 
+.auth-options {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin: -0.25rem 0 1rem;
+    font-size: 0.875rem;
+}
+
+.auth-remember {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    user-select: none;
+    color: var(--text-secondary, #475569);
+    font-weight: 500;
+}
+
+.auth-remember input[type="checkbox"] {
+    width: 17px;
+    height: 17px;
+    accent-color: var(--primary, #03955f);
+    cursor: pointer;
+    border-radius: 4px;
+    margin: 0;
+}
+
+.auth-remember:hover {
+    color: var(--text-primary, #04263d);
+}
+
+.auth-clear-saved {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    border: none;
+    background: none;
+    color: var(--red, #ef4444);
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.auth-clear-saved:hover {
+    background: var(--red-50, #fef2f2);
+    color: #b91c1c;
+}
+
+.auth-clear-saved .icon {
+    width: 13px;
+    height: 13px;
+}
+
+.auth-clear-saved[hidden] {
+    display: none;
+}
+
 .auth-error {
     display: flex;
     align-items: flex-start;
